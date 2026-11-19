@@ -28,6 +28,7 @@ Anmelden: `http://<server>:8420` mit einem Linux-Benutzer. Superadmin ist standa
 | `--erlaubte-netze "…"` | eigene Liste (CIDR, Komma); `*` = alle (nur hinter Firewall!) |
 | `--port 9000` | anderer Port |
 | `--superadmins root,anna` | volle Rechte für diese Konten |
+| `--ersetzen` | ein schon laufendes Command Center aus einem anderen Ordner ersetzen (sonst bricht der Installer ab) |
 | `--ohne-schutz` / `--nur-schutz` | ohne fail2ban/IDS bzw. nur das Schutz-Paket |
 | `--ids-modus melden\|sperren`, `--trusted "IP …"` | Schutz-Paket: nur melden oder sperren; eigene Anschlüsse nie sperren |
 | `--ntfy-url … --ntfy-topic …` | Push-Meldungen über ntfy |

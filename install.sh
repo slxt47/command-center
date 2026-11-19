@@ -57,6 +57,7 @@ while [ $# -gt 0 ]; do
     --erlaubte-netze) OPT_NETZE=$2; shift ;;
     --superadmins)    OPT_SUPER=$2; shift ;;
     --port)           OPT_PORT=$2; shift ;;
+    --ersetzen)       ERSETZEN=1 ;;
     --lan)            OPT_NETZE="192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,100.64.0.0/10,fd00::/8" ;;
     --nur-lokal)      OPT_NETZE="127.0.0.1/32" ;;
     --trusted|--ids-modus|--ntfy-url|--ntfy-topic|--ntfy-token|--firewall)
@@ -94,6 +95,17 @@ fi
 [ "$(id -u)" -eq 0 ] || { err "Bitte als root ausführen (sudo ./install.sh)."; exit 1; }
 
 # ─── Versionen ──────────────────────────────────────────────────────────────
+# Läuft schon ein Command Center aus einem ANDEREN Ordner (z. B. eigene Entwicklungs-Installation)? Dann nicht
+# ungefragt ersetzen – nur mit --ersetzen.
+if [ $DASH -eq 1 ] && [ "$MODE" != status ] && command -v docker >/dev/null 2>&1 && docker inspect linux-dashboard >/dev/null 2>&1; then
+  ANDERER=$(docker inspect linux-dashboard --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null || true)
+  if [ -n "$ANDERER" ] && [ "$ANDERER" != "$REPO" ] && [ "${ERSETZEN:-0}" != 1 ]; then
+    err "Auf diesem Server läuft bereits ein Command Center aus $ANDERER."
+    err "Es wird NICHT ersetzt. Update dort ausführen – oder bewusst ersetzen mit:  … | sudo bash -s -- --ersetzen"
+    exit 1
+  fi
+fi
+
 INSTALLIERT=$(cat "$VERFILE" 2>/dev/null || true)
 ALT_DASH=0
 if [ -z "$INSTALLIERT" ] && { [ -d "$DATA_DIR" ] || docker inspect linux-dashboard >/dev/null 2>&1; }; then
@@ -244,7 +256,7 @@ if [ $DASH -eq 1 ]; then
     # Daten liegen in $DATA_DIR und bleiben erhalten.
     if docker inspect linux-dashboard >/dev/null 2>&1 && \
        [ "$(docker inspect linux-dashboard --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}')" != "$REPO" ]; then
-      warn "Ersetze bestehenden Container linux-dashboard (anderes Verzeichnis)."
+      warn "Ersetze bestehenden Container linux-dashboard (anderes Verzeichnis, --ersetzen)."
       docker rm -f linux-dashboard >/dev/null
     fi
     # Code ist per Volume eingebunden: Neustart erzwingen, sonst laeuft der alte Code weiter.
