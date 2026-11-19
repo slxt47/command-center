@@ -57,7 +57,7 @@ from dashboard.vms import get_vm_display, get_vm_full, get_vms, list_host_device
 
 # Mehrsprachigkeit (3.14.0): Voreinstellung des Servers für Besucher ohne eigene Wahl (Cookie cc_sprache)
 _CC_SPRACHE = os.environ.get("CC_SPRACHE", "de").strip().lower()
-if _CC_SPRACHE not in ("de", "en"):
+if _CC_SPRACHE not in ("de", "en", "es"):
     _CC_SPRACHE = "de"
 
 
@@ -1152,6 +1152,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         elif path == "/api/schnellspeicher":
             if self._require_superadmin(): return
             self.send_json(_sp.status())
+        elif path == "/api/lizenz":
+            if self._require_superadmin(): return
+            from dashboard import lizenz as _lz
+            self.send_json(_lz.status())
         elif path == "/api/terminal/tabs":
             if self._require_superadmin(): return
             self.send_json({"tabs": _termtabs.liste(self._get_session_user(), self._is_superadmin()),
@@ -2042,6 +2046,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_json(run_update())
 
         # ── External connections ──────────────────────────────────────────────
+        elif path == "/api/lizenz":
+            if self._require_superadmin(): return
+            from dashboard import lizenz as _lz
+            k = str(data.get("schluessel") or "").strip()[:40]
+            if not re.fullmatch(r"(CC-?)?[0-9A-Za-z]{5}(-?[0-9A-Za-z]{5}){3}", k):
+                self.send_json({"success": False, "error": "Das ist kein gültiger Schlüssel (Form CC-XXXXX-XXXXX-XXXXX-XXXXX)."}); return
+            s = _lz.pruefen(k)
+            grund = s.get("neu_abgelehnt") or ("" if s.get("gueltig") else s.get("grund"))
+            texte = {"unbekannt": "Diesen Schlüssel gibt es nicht.", "gesperrt": "Dieser Schlüssel ist gesperrt.",
+                     "abgelaufen": "Diese Lizenz ist abgelaufen – bitte verlängern.", "netz": "Lizenzserver nicht erreichbar.",
+                     "zu_viele_server": "Dieser Schlüssel ist schon auf der erlaubten Zahl von Servern aktiv."}
+            self.send_json({"success": not grund, "error": texte.get(grund, grund), "lizenz": _lz.status()})
+
         elif path == "/api/prefs":
             def _check_key(text, pp):
                 return load_pkey(text, pp)[1]

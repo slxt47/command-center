@@ -1,0 +1,9 @@
+[Unit]
+Description=Command Center: Einstellungen und Daten sichern
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/command-center-backup
+Nice=10
+IOSchedulingClass=idle

@@ -67,6 +67,20 @@ def main():
     # erhalten und wird beim nächsten Zugriff wieder aufgetaut.
     _browser_mgr.start_idle_watcher()
 
+    # Lizenz (3.15.0): beim Start und dann täglich bei lizenz.slxt.dev prüfen (nur wenn ein Schlüssel eingetragen ist)
+    def _lizenz_pruefen():
+        import time as _t
+        from dashboard import lizenz as _lz
+        _t.sleep(30)
+        while True:
+            try:
+                if _lz.lesen().get("schluessel"):
+                    _lz.pruefen()
+            except Exception as _e:  # noqa: BLE001
+                print("[lizenz]", type(_e).__name__, flush=True)
+            _t.sleep(86400)
+    threading.Thread(target=_lizenz_pruefen, daemon=True, name="lizenz").start()
+
     # Verwaiste VM-KasmVNC-Prozesse früherer Läufe beenden. Wegen pid:host
     # überleben sie Container-Neustarts und würden Ports/Displays blockieren
     # bzw. sich um die exklusive QEMU-VNC-Verbindung streiten.

@@ -74,3 +74,12 @@ SURICATA_PPA="1"
 # Weitere Netze, die das IDS nie sperrt (zusaetzlich zu Cloudflare, den
 # eigenen/internen Netzen, TRUSTED_IPS, den System-Resolvern).
 IDS_WHITELIST_EXTRA=""
+
+# Module (Installer: --module / --ohne, spaeter: command-center module)
+# fail2ban: Login-Schutz SSH, Command Center, Web-Apps. 0 = kein fail2ban; der IDS sperrt dann selbst (ipset).
+F2B_AKTIV="1"
+# Angriffs-Radar: Web-Scans/Exploits aus den Container-Protokollen sammeln (Seite "Angriffe"),
+# mit fail2ban auch automatisch sperren.
+RADAR_AKTIV="1"
+# Sperrdauer, wenn der IDS ohne fail2ban selbst sperrt (z. B. 1h, 1d, 1w)
+IDS_SPERRZEIT="1d"

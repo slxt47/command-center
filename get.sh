@@ -24,15 +24,15 @@ SPRACHE="${CC_SPRACHE:-}"
 vorher=""; for a in "$@"; do [ "$vorher" = --sprache ] || [ "$vorher" = --language ] && SPRACHE=$a; vorher=$a; done
 [ -z "$SPRACHE" ] && SPRACHE=$(sed -n 's/^CC_SPRACHE=//p' /etc/linux-dashboard/dashboard.env 2>/dev/null | head -1 || true)
 if [ -z "$SPRACHE" ] && [[ " $* " != *" --ja "* ]] && { : </dev/tty; } 2>/dev/null; then
-  printf '\nSprache / Language:  1) Deutsch  2) English  [1]: ' >/dev/tty; read -r _s </dev/tty || true
-  case "$_s" in 2|en|EN|e) SPRACHE=en ;; *) SPRACHE=de ;; esac
+  printf '\nSprache / Language / Idioma:  1) Deutsch  2) English  3) Español  [1]: ' >/dev/tty; read -r _s </dev/tty || true
+  case "$_s" in 2|en|EN|e) SPRACHE=en ;; 3|es|ES) SPRACHE=es ;; *) SPRACHE=de ;; esac
 fi
-case "$SPRACHE" in en) ;; *) SPRACHE=de ;; esac
-t() { if [ "$SPRACHE" = en ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+case "$SPRACHE" in en|es) ;; *) SPRACHE=de ;; esac
+t() { case "$SPRACHE" in en) printf '%s' "$2" ;; es) printf '%s' "${3:-$2}" ;; *) printf '%s' "$1" ;; esac; }
 
-[ "$(id -u)" -eq 0 ] || { rot "$(t 'Bitte mit sudo ausführen:' 'Please run with sudo:')  curl -fsSL …/get.sh | sudo bash"; exit 1; }
-[ "$(uname -s)" = Linux ] || { rot "$(t 'Das Command Center läuft auf Linux-Servern.' 'The Command Center runs on Linux servers.')"; exit 1; }
-case "$(uname -m)" in x86_64|amd64|aarch64|arm64) ;; *) rot "$(t 'Nicht unterstützte Architektur' 'Unsupported architecture'): $(uname -m) (x86_64, arm64)"; exit 1 ;; esac
+[ "$(id -u)" -eq 0 ] || { rot "$(t 'Bitte mit sudo ausführen:' 'Please run with sudo:' 'Ejecútalo con sudo:')  curl -fsSL …/get.sh | sudo bash"; exit 1; }
+[ "$(uname -s)" = Linux ] || { rot "$(t 'Das Command Center läuft auf Linux-Servern.' 'The Command Center runs on Linux servers.' 'El Command Center funciona en servidores Linux.')"; exit 1; }
+case "$(uname -m)" in x86_64|amd64|aarch64|arm64) ;; *) rot "$(t 'Nicht unterstützte Architektur' 'Unsupported architecture' 'Arquitectura no admitida'): $(uname -m) (x86_64, arm64)"; exit 1 ;; esac
 
 # Werkzeuge, die der Installer braucht (git oder tar+curl, python3)
 paket() {
@@ -42,13 +42,13 @@ paket() {
   elif command -v pacman >/dev/null; then pacman -Sy --noconfirm --needed "$@" >/dev/null
   elif command -v zypper >/dev/null; then zypper --non-interactive install "$@" >/dev/null
   elif command -v apk >/dev/null; then apk add --no-cache "$@" >/dev/null
-  else rot "$(t 'Kein unterstützter Paketmanager gefunden – bitte von Hand installieren:' 'No supported package manager found – please install by hand:') $*"; exit 1; fi
+  else rot "$(t 'Kein unterstützter Paketmanager gefunden – bitte von Hand installieren:' 'No supported package manager found – please install by hand:' 'No se encontró un gestor de paquetes compatible: instálalo a mano:') $*"; exit 1; fi
 }
 command -v curl >/dev/null || paket curl
 command -v python3 >/dev/null || paket python3
 command -v git >/dev/null || paket git || true
 
-gruen "▸ $(t 'Lade Command Center nach' 'Downloading Command Center to') $ZIEL …"
+gruen "▸ $(t 'Lade Command Center nach' 'Downloading Command Center to' 'Descargando el Command Center en') $ZIEL …"
 if [ -d "$ZIEL/.git" ] && command -v git >/dev/null; then
   git -C "$ZIEL" fetch -q --depth 1 origin "$ZWEIG" && git -C "$ZIEL" reset -q --hard "origin/$ZWEIG"
 elif command -v git >/dev/null; then
@@ -62,11 +62,11 @@ fi
 # Schutz-Paket (fail2ban + IDS) gibt es für Debian/Ubuntu; sonst nur das Command Center
 EXTRA=()
 if ! command -v apt-get >/dev/null && [[ " $* " != *" --ohne-schutz "* ]]; then
-  echo "  $(t 'Hinweis: fail2ban/IDS-Schutzpaket gibt es nur für Debian/Ubuntu – installiere nur das Command Center.' 'Note: the fail2ban/IDS protection package is only available for Debian/Ubuntu – installing only the Command Center.')"
+  echo "  $(t 'Hinweis: fail2ban/IDS-Schutzpaket gibt es nur für Debian/Ubuntu – installiere nur das Command Center.' 'Note: the fail2ban/IDS protection package is only available for Debian/Ubuntu – installing only the Command Center.' 'Nota: el paquete de protección fail2ban/IDS solo existe para Debian/Ubuntu: se instala solo el Command Center.')"
   EXTRA+=(--ohne-schutz)
 fi
 
 [[ " $* " == *" --sprache "* || " $* " == *" --language "* ]] || EXTRA+=(--sprache "$SPRACHE")
 
 cd "$ZIEL"
-exec bash ./install.sh --ja "${EXTRA[@]}" "$@"
+exec bash ./install.sh --ja --menue "${EXTRA[@]}" "$@"

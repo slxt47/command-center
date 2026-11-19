@@ -192,6 +192,21 @@ def herkunft(ext):
         return ''
 
 
+def sekunden(t):
+    m = re.fullmatch(r'(\d+)\s*([smhdw]?)', str(t).strip())
+    if not m:
+        return 86400
+    return int(m.group(1)) * {'': 1, 's': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800}[m.group(2)]
+
+
+def direkt_sperren(ip, dauer):
+    s = 'ids_ban6' if ip.version == 6 else 'ids_ban4'
+    r = subprocess.run(['ipset', '-exist', 'add', s, ip.compressed, 'timeout', str(min(sekunden(dauer), 2147483))],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        log(f'ipset-Sperre fehlgeschlagen ({ip}): {r.stderr.strip()[:120]}')
+
+
 def bereits_gesperrt(ip):
     return subprocess.run(['ipset', 'test', 'ids_ban6' if ip.version == 6 else 'ids_ban4',
                            ip.compressed], capture_output=True).returncode == 0
@@ -244,6 +259,9 @@ def main():
 
     def schreibe(art, ip, text):
         out.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} {art} {ip.compressed} {text}\n')
+        # Ohne fail2ban (F2B_AKTIV=0 -> DIREKT_SPERREN=1): selbst ins ipset, Ablauf per ipset-Timeout
+        if art in ('IDS-ANGRIFF', 'IDS-AUSGANG') and c.get('DIREKT_SPERREN') == '1':
+            direkt_sperren(ip, c.get('SPERRZEIT', '1d'))
 
     for line in folge(EVE):
         jetzt = time.time()

@@ -7,14 +7,40 @@ curl -fsSL https://raw.githubusercontent.com/slxt47/command-center/main/get.sh |
 ```
 
 `get.sh` prüft System und Architektur (x86_64/arm64), installiert `curl`, `python3` und `git` bei Bedarf, lädt das
-Command Center nach `/opt/command-center` und startet `install.sh --ja` (keine Rückfragen). `install.sh`:
+Command Center nach `/opt/command-center` und startet `install.sh`. Gefragt wird nur dreierlei (am Terminal, auch bei
+`curl … | sudo bash`):
 
-1. installiert Docker, falls es fehlt (Docker-Repository für Debian/Ubuntu/Fedora/RHEL, Paketquellen für Arch/openSUSE),
-2. legt `/etc/linux-dashboard/dashboard.env` an (Einstellungen, bleiben bei Updates erhalten),
-3. lädt das fertige Image `ghcr.io/slxt47/command-center:<version>` – klappt das nicht, wird lokal gebaut,
-4. startet den Container `linux-dashboard` (Host-Netz, Port 8420),
-5. installiert auf Debian/Ubuntu das Schutz-Paket (fail2ban, Suricata-IDS, Angriffs-Radar),
-6. legt den Befehl `command-center` an.
+1. **Sprache** – Deutsch, English, Español (`--sprache de|en|es`),
+2. **Module** – was installiert wird (Liste zum An-/Abhaken, siehe unten; `--module …`),
+3. **Lizenzschlüssel** – anfragen unter [lizenz.slxt.dev](https://lizenz.slxt.dev) (`--lizenz CC-…`, siehe [Lizenz](lizenz.md)).
+
+Danach `install.sh`: Docker (falls nötig), `/etc/linux-dashboard/dashboard.env`, fertiges Image
+`ghcr.io/slxt47/command-center:<version>` (sonst lokaler Build), Container `linux-dashboard` (Host-Netz, Port 8420),
+die gewählten Module und den Befehl `command-center`.
+
+## Module
+
+| Modul | Standard | Was es tut |
+|---|---|---|
+| `fail2ban` | an | sperrt nach falschen Logins (SSH, Command Center, Web-Apps) |
+| `ids` | an | Suricata erkennt Angriffe im Netzverkehr (~1–2 GB RAM). **Geht auch ohne fail2ban** – dann sperrt der IDS selbst (ipset mit Ablaufzeit `IDS_SPERRZEIT`) |
+| `firewall` | an | eigene Sperr-Ketten; ohne: nur ipsets, die deine eigene Firewall einhängt |
+| `radar` | an | Angriffs-Radar (Seite „Angriffe“); mit fail2ban auch automatische Sperren |
+| `cloudflare` | aus | sperrt zusätzlich am Cloudflare-Rand (braucht fail2ban und einen API-Token) |
+| `ntfy` | aus | Push-Meldungen aufs Handy |
+| `postgres` | aus | PostgreSQL + Kopie als Schnellspeicher (sonst SQLite) |
+| `backup` | an | sichert Einstellungen und Daten jede Nacht nach `/var/backups/command-center` (14 Tage) |
+
+`fail2ban`, `ids`, `firewall`, `radar`, `cloudflare` gibt es nur für Debian/Ubuntu. Ohne Terminal (z. B. Automatisierung)
+gelten die Standardwerte bzw.:
+
+```bash
+… | sudo bash -s -- --sprache en --lizenz CC-XXXXX-XXXXX-XXXXX-XXXXX --module "ids,backup"
+… | sudo bash -s -- --ohne fail2ban --mit postgres
+```
+
+Später ändern: `sudo command-center module` (anzeigen), `sudo command-center module +postgres -ids`.
+Die Auswahl steht in `/etc/linux-dashboard/module.conf`.
 
 Anmelden: `http://<server>:8420` mit einem Linux-Benutzer. Superadmin ist standardmäßig `root` und der Benutzer, der
 `sudo` ausgeführt hat.
@@ -27,10 +53,12 @@ Anmelden: `http://<server>:8420` mit einem Linux-Benutzer. Superadmin ist standa
 | `--nur-lokal` | nur 127.0.0.1 – für Reverse-Proxy oder Tunnel auf demselben Server |
 | `--erlaubte-netze "…"` | eigene Liste (CIDR, Komma); `*` = alle (nur hinter Firewall!) |
 | `--port 9000` | anderer Port |
-| `--sprache en` | Sprache der Oberfläche und des Installers (`de` oder `en`); ohne Angabe fragt der Installer (auch bei `curl … \| sudo bash`) |
+| `--sprache en` | Sprache der Oberfläche und des Installers (`de`, `en`, `es`); ohne Angabe fragt der Installer |
+| `--lizenz CC-…` | Lizenzschlüssel (ohne Angabe fragt der Installer) |
+| `--module "…"`, `--mit …`, `--ohne …` | Module festlegen, dazunehmen, weglassen |
 | `--superadmins root,anna` | volle Rechte für diese Konten |
 | `--ersetzen` | ein schon laufendes Command Center aus einem anderen Ordner ersetzen (sonst bricht der Installer ab) |
-| `--ohne-schutz` / `--nur-schutz` | ohne fail2ban/IDS bzw. nur das Schutz-Paket |
+| `--ohne-schutz` / `--nur-schutz` | ohne fail2ban/IDS/Firewall/Radar bzw. nur das Schutz-Paket |
 | `--ids-modus melden\|sperren`, `--trusted "IP …"` | Schutz-Paket: nur melden oder sperren; eigene Anschlüsse nie sperren |
 | `--ntfy-url … --ntfy-topic …` | Push-Meldungen über ntfy |
 
@@ -54,7 +82,9 @@ Bei Cloudflare Tunnel zusätzlich **Cloudflare Access** davor setzen. `DASHBOARD
 
 ```bash
 sudo command-center update            # neueste Version, Einstellungen und Daten bleiben
-sudo command-center sprache en        # Voreinstellung der Sprache ändern (de|en)
+sudo command-center sprache en        # Voreinstellung der Sprache ändern (de|en|es)
+sudo command-center lizenz            # Lizenz anzeigen; mit CC-… neuen Schlüssel eintragen
+sudo command-center backup            # Sicherung jetzt (--liste, --zurueck DATEI)
 sudo command-center deinstallieren    # Container + Programm weg, Daten in /var/lib/linux-dashboard bleiben
 sudo command-center deinstallieren --alles
 ```

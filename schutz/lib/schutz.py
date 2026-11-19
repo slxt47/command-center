@@ -34,7 +34,7 @@ DEFAULTS = {
     'FIREWALL': 'eigen', 'SSH_BANTIME': '1w', 'DAUERSPERRE_TAGE': '90',
     'F2B_DBPURGEAGE': '90d', 'IDS_AKTIV': '1', 'IDS_THREADS': 'auto',
     'IDS_CPU_QUOTA': '400%', 'IDS_MEMORY_MAX': '8G', 'IDS_WHITELIST_EXTRA': '',
-    'CLOUDFLARE': '0', 'DASHBOARD_JAIL': 'true',
+    'CLOUDFLARE': '0', 'DASHBOARD_JAIL': 'true', 'F2B_AKTIV': '1', 'RADAR_AKTIV': '1', 'IDS_SPERRZEIT': '1d',
 }
 
 _KV = re.compile(r'^\s*([A-Z_][A-Z0-9_]*)=(.*?)\s*$')
@@ -199,6 +199,7 @@ def cmd_render(src, dst):
     werte.update(n)
     werte['DAUERSPERRE_FINDTIME'] = re.sub(r'\D', '', c['DAUERSPERRE_TAGE']) + 'd'
     werte['IDS_ENABLED'] = 'true' if c.get('IDS_AKTIV') == '1' else 'false'
+    werte['RADAR_ENABLED'] = 'true' if c.get('RADAR_AKTIV', '1') == '1' else 'false'
     werte['DASHBOARD_JAIL'] = 'true' if c.get('DASHBOARD_JAIL', 'true') in ('1', 'true') else 'false'
     cf = n['CLOUDFLARE'] == '1'
     out = []

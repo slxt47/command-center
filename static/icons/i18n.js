@@ -11,7 +11,7 @@
 // → Voreinstellung des Servers (<html data-cc-sprache>, aus CC_SPRACHE in dashboard.env) → Deutsch.
 (function () {
   'use strict';
-  const SPRACHEN = { de: 'Deutsch', en: 'English' };   // neue Sprache: hier eintragen + sprache-<code>.js
+  const SPRACHEN = { de: 'Deutsch', en: 'English', es: 'Español' };   // neue Sprache: hier eintragen + sprache-<code>.js
   const cookie = (document.cookie.match(/(?:^|;\s*)cc_sprache=([a-z]{2})/) || [])[1];
   const vorgabe = document.documentElement.getAttribute('data-cc-sprache');
   let code = cookie || vorgabe || 'de';
@@ -39,7 +39,7 @@
     api.daten = d;
     vorbereiten(d);
   };
-  document.write(`<script src="/icons/sprache-${code}.js?v=c575cb0562"><\/script>`);
+  document.write(`<script src="/icons/sprache-${code}.js?v=042f1cb094"><\/script>`);
 
   const norm = (s) => s.replace(/\s+/g, ' ').trim();
   let TEXTE = new Map(), MUSTER = [], EINHEITEN = [];

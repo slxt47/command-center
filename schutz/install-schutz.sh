@@ -15,7 +15,11 @@
 #
 # Optionen fuer die Erstinstallation (sonst wird gefragt):
 #   --trusted "IP ..."        eigene Anschluesse, werden nie gesperrt
-#   --ohne-ids                nur fail2ban + Firewall, kein Suricata
+#   --ohne-ids / --mit-ids    IDS (Suricata) ab-/anschalten
+#   --ohne-fail2ban / --mit-fail2ban   ohne fail2ban sperrt der IDS selbst (ipset)
+#   --ohne-radar / --mit-radar         Angriffs-Radar (Web-Scans sammeln, mit fail2ban sperren)
+#   --ohne-cloudflare         Cloudflare-Rand-Sperre abschalten
+#   (Diese Schalter gelten auch beim Update und ueberschreiben schutz.conf.)
 #   --ids-modus melden|sperren
 #   --ntfy-url URL --ntfy-topic TOPIC [--ntfy-token TOKEN]
 #   --cloudflare              Web-Apps liegen hinter Cloudflare (optional)
@@ -51,7 +55,7 @@ else VERSION=0.0.0; fi
 
 MODE=install; JA=0; FORCE=0; UEBERNEHMEN=0; ALLES=0
 OPT_TRUSTED=""; OPT_IDS=""; OPT_MODUS=""; OPT_NTFY_URL=""; OPT_NTFY_TOPIC=""
-OPT_NTFY_TOKEN=""; OPT_CF=""; OPT_FW=""; OPT_DASHJAIL=""
+OPT_NTFY_TOKEN=""; OPT_CF=""; OPT_FW=""; OPT_DASHJAIL=""; OPT_F2B=""; OPT_RADAR=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --ja|-y)              JA=1 ;;
@@ -62,6 +66,12 @@ while [ $# -gt 0 ]; do
         --uebernehmen)        UEBERNEHMEN=1 ;;
         --trusted)            OPT_TRUSTED=$2; shift ;;
         --ohne-ids)           OPT_IDS=0 ;;
+        --mit-ids)            OPT_IDS=1 ;;
+        --ohne-fail2ban)      OPT_F2B=0 ;;
+        --mit-fail2ban)       OPT_F2B=1 ;;
+        --ohne-radar)         OPT_RADAR=0 ;;
+        --mit-radar)          OPT_RADAR=1 ;;
+        --ohne-cloudflare)    OPT_CF=0 ;;
         --ids-modus)          OPT_MODUS=$2; shift ;;
         --ntfy-url)           OPT_NTFY_URL=$2; shift ;;
         --ntfy-topic)         OPT_NTFY_TOPIC=$2; shift ;;
@@ -199,8 +209,6 @@ if [ ! -f "$CONF" ]; then
     fi
     setze "$CONF" IDS_AKTIV "$ids"
 
-    [ -n "$OPT_CF" ] && setze "$CONF" CLOUDFLARE 1
-    [ -n "$OPT_FW" ] && setze "$CONF" FIREWALL "$OPT_FW"
     [ -n "$OPT_DASHJAIL" ] && setze "$CONF" DASHBOARD_JAIL "$OPT_DASHJAIL"
 
     if [ -n "$OPT_NTFY_URL" ]; then
@@ -217,10 +225,23 @@ if [ ! -f "$CONF" ]; then
 else
     python3 "$SRC/lib/schutz.py" conf-merge "$SRC/config/schutz.conf.example" "$CONF"
     [ -n "$OPT_DASHJAIL" ] && setze "$CONF" DASHBOARD_JAIL "$OPT_DASHJAIL"
+    [ -n "$OPT_IDS" ] && setze "$CONF" IDS_AKTIV "$OPT_IDS"
 fi
+# Modul-Schalter gelten bei Erstinstallation UND Update (command-center module)
+case "$OPT_CF" in 1) setze "$CONF" CLOUDFLARE 1 ;; 0) setze "$CONF" CLOUDFLARE 0 ;; esac
+[ -n "$OPT_FW" ] && setze "$CONF" FIREWALL "$OPT_FW"
+[ -n "$OPT_F2B" ] && setze "$CONF" F2B_AKTIV "$OPT_F2B"
+[ -n "$OPT_RADAR" ] && setze "$CONF" RADAR_AKTIV "$OPT_RADAR"
 chmod 600 "$CONF"
 
-IDS=$(cget IDS_AKTIV); CF=$(cget CLOUDFLARE); FW=$(cget FIREWALL)
+IDS=$(cget IDS_AKTIV); CF=$(cget CLOUDFLARE); FW=$(cget FIREWALL); FB=$(cget F2B_AKTIV); RADAR=$(cget RADAR_AKTIV)
+if [ "$FB" != 1 ] && [ "$CF" = 1 ]; then
+    warn "Cloudflare-Rand-Sperre braucht fail2ban – ohne fail2ban abgeschaltet."; CF=0; setze "$CONF" CLOUDFLARE 0
+fi
+if [ "$FB" != 1 ] && [ "$(cget DASHBOARD_JAIL)" != false ]; then
+    warn "Ohne fail2ban gibt es keine Sperre nach falschen Logins (SSH, Command Center)."
+fi
+log "Module: fail2ban=$FB IDS=$IDS Radar=$RADAR Firewall=$FW Cloudflare=$CF"
 
 # ===========================================================================
 # Pakete
@@ -228,7 +249,8 @@ IDS=$(cget IDS_AKTIV); CF=$(cget CLOUDFLARE); FW=$(cget FIREWALL)
 if [ "$MODE" != anwenden ]; then
     export DEBIAN_FRONTEND=noninteractive
     OS_ID=$(. /etc/os-release; echo "${ID:-}")   # nicht global sourcen: setzt sonst $VERSION
-    PKGS="fail2ban ipset iptables jq curl python3 python3-yaml python3-systemd conntrack"
+    PKGS="ipset iptables jq curl python3 python3-yaml python3-systemd conntrack"
+    [ "$FB" = 1 ] && PKGS="fail2ban $PKGS"
     if [ "$IDS" = 1 ] && ! command -v suricata >/dev/null; then
         if [ "$OS_ID" = ubuntu ] && [ "$(cget SURICATA_PPA)" = 1 ]; then
             log "Fuege OISF-PPA fuer aktuelles Suricata hinzu ..."
@@ -271,7 +293,7 @@ anlegen() {   # anlegen <beispiel> <ziel> <modus>
     else python3 "$SRC/lib/schutz.py" conf-merge "$1" "$2"; fi
 }
 anlegen "$SRC/config/blk_net4.txt.example" "$ETC/blk_net4.txt" 644
-if [ ! -f $F2B/jail.d/waechter.local ]; then
+if [ "$FB" = 1 ] && [ ! -f $F2B/jail.d/waechter.local ]; then
     install -m 644 "$SRC/config/jail-waechter.local.example" $F2B/jail.d/waechter.local
 fi
 if [ "$IDS" = 1 ]; then
@@ -298,6 +320,8 @@ if [ "$IDS" = 1 ]; then
         fi
     fi
     [ -f /etc/ids-watch.whitelist ] || install -m 644 "$SRC/config/ids-watch.whitelist.example" /etc/ids-watch.whitelist
+    # Ohne fail2ban sperrt ids-watch selbst
+    sed -i "s/^DIREKT_SPERREN=.*/DIREKT_SPERREN=$([ "$FB" = 1 ] && echo 0 || echo 1)/; s/^SPERRZEIT=.*/SPERRZEIT=$(cget IDS_SPERRZEIT)/" /etc/ids-watch.conf
 fi
 if [ "$CF" = 1 ] && [ ! -f $F2B/cloudflare.local ]; then
     install -m 600 "$SRC/config/cloudflare.local.example" $F2B/cloudflare.local
@@ -348,17 +372,23 @@ fi
 if [ "$CF" = 1 ]; then
     for f in cf-ban.sh cf-ban-reconcile.sh cf-ban-setup.sh; do inst "$SRC/sbin/$f" "$SBIN/$f" 700; done
 fi
+if [ "$RADAR" = 1 ]; then
+    inst "$SRC/sbin/angriffe-sammeln.py" "$SBIN/angriffe-sammeln.py" 750
+fi
 
-# fail2ban
-for f in "$SRC"/fail2ban/action.d/*.conf; do
-    b=$(basename "$f")
-    [ "$b" = cf-block.conf ] && [ "$CF" != 1 ] && continue
-    inst "$f" "$F2B/action.d/$b" 644
-done
-for f in "$SRC"/fail2ban/filter.d/*.conf; do inst "$f" "$F2B/filter.d/$(basename "$f")" 644; done
-render "$SRC/fail2ban/filter.d/mail-subnet24.conf.in" "$F2B/filter.d/mail-subnet24.conf" 644
-render "$SRC/fail2ban/jail.d/waechter.conf.in" "$F2B/jail.d/waechter.conf" 644
-render "$SRC/fail2ban/fail2ban.d/waechter.conf.in" "$F2B/fail2ban.d/waechter.conf" 644
+# fail2ban (nur mit F2B_AKTIV=1; sonst entfernt das Manifest frueher installierte Paket-Dateien)
+if [ "$FB" = 1 ]; then
+    for f in "$SRC"/fail2ban/action.d/*.conf; do
+        b=$(basename "$f")
+        [ "$b" = cf-block.conf ] && [ "$CF" != 1 ] && continue
+        inst "$f" "$F2B/action.d/$b" 644
+    done
+    for f in "$SRC"/fail2ban/filter.d/*.conf; do inst "$f" "$F2B/filter.d/$(basename "$f")" 644; done
+    render "$SRC/fail2ban/filter.d/mail-subnet24.conf.in" "$F2B/filter.d/mail-subnet24.conf" 644
+    render "$SRC/fail2ban/jail.d/waechter.conf.in" "$F2B/jail.d/waechter.conf" 644
+    render "$SRC/fail2ban/jail.d/angriffe.conf.in" "$F2B/jail.d/angriffe.conf" 644
+    render "$SRC/fail2ban/fail2ban.d/waechter.conf.in" "$F2B/fail2ban.d/waechter.conf" 644
+fi
 
 # systemd + logrotate
 inst "$SRC/systemd/waechter-firewall.service" "$SYSD/waechter-firewall.service" 644
@@ -374,6 +404,9 @@ if [ "$IDS" = 1 ]; then
 fi
 if [ "$CF" = 1 ]; then
     for u in cf-ban-reconcile.service cf-ban-reconcile.timer; do inst "$SRC/systemd/$u" "$SYSD/$u" 644; done
+fi
+if [ "$RADAR" = 1 ]; then
+    for u in angriffe-sammeln.service angriffe-sammeln.timer; do inst "$SRC/systemd/$u" "$SYSD/$u" 644; done
 fi
 inst "$SRC/logrotate/linux-dashboard-schutz" /etc/logrotate.d/linux-dashboard-schutz 644
 
@@ -466,6 +499,15 @@ else
 fi
 if [ "$CF" = 1 ]; then
     systemctl enable --now cf-ban-reconcile.timer >/dev/null 2>&1
+else
+    systemctl disable --now cf-ban-reconcile.timer >/dev/null 2>&1 || true
+fi
+if [ "$RADAR" = 1 ]; then
+    install -d -m 750 /var/log/angriffe; touch /var/log/angriffe/web.log
+    systemctl enable --now angriffe-sammeln.timer >/dev/null 2>&1
+    log "Angriffs-Radar aktiv (alle 2 min)"
+else
+    systemctl disable --now angriffe-sammeln.timer >/dev/null 2>&1 || true
 fi
 
 # ===========================================================================
@@ -476,7 +518,11 @@ touch /var/log/fail2ban.log
 if [ "$(cget DASHBOARD_JAIL)" != false ]; then
     mkdir -p /var/lib/linux-dashboard; touch /var/lib/linux-dashboard/auth.log
 fi
-if ! fail2ban-client -t >/tmp/f2b-test.$$ 2>&1; then
+if [ "$FB" != 1 ]; then
+    # Frueher installierte Paket-Jails sind per Manifest entfernt; fremde fail2ban-Konfiguration bleibt unberuehrt.
+    command -v fail2ban-client >/dev/null && systemctl is-active --quiet fail2ban && { fail2ban-client reload >/dev/null 2>&1 || true; }
+    log "fail2ban: nicht Teil dieser Installation (F2B_AKTIV=0)"
+elif ! fail2ban-client -t >/tmp/f2b-test.$$ 2>&1; then
     err "fail2ban-Konfiguration fehlerhaft:"; grep -iE 'error|fehler' /tmp/f2b-test.$$ | tail -8 >&2
     if [ -d "$BACKUP$F2B" ]; then
         err "Stelle die vorherigen fail2ban-Dateien wieder her ($BACKUP$F2B)."
@@ -485,19 +531,21 @@ if ! fail2ban-client -t >/tmp/f2b-test.$$ 2>&1; then
     rm -f /tmp/f2b-test.$$
     exit 1
 fi
-rm -f /tmp/f2b-test.$$
-systemctl enable fail2ban >/dev/null 2>&1
-if systemctl is-active --quiet fail2ban; then
-    fail2ban-client reload >/dev/null || systemctl restart fail2ban
-else
-    systemctl restart fail2ban
+if [ "$FB" = 1 ]; then
+    rm -f /tmp/f2b-test.$$
+    systemctl enable fail2ban >/dev/null 2>&1
+    if systemctl is-active --quiet fail2ban; then
+        fail2ban-client reload >/dev/null || systemctl restart fail2ban
+    else
+        systemctl restart fail2ban
+    fi
+    for _ in $(seq 1 20); do
+        jails=$(fail2ban-client status 2>/dev/null | sed -n 's/^.*Jail list:\s*//p' || true)
+        [ -n "$jails" ] && break
+        sleep 1
+    done
+    log "fail2ban: ${jails:-KEINE JAILS AKTIV - journalctl -u fail2ban}"
 fi
-for _ in $(seq 1 20); do
-    jails=$(fail2ban-client status 2>/dev/null | sed -n 's/^.*Jail list:\s*//p' || true)
-    [ -n "$jails" ] && break
-    sleep 1
-done
-log "fail2ban: ${jails:-KEINE JAILS AKTIV - journalctl -u fail2ban}"
 
 if [ "$MODE" != anwenden ]; then
     echo "$VERSION" > "$VERFILE"

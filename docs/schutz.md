@@ -1,6 +1,9 @@
 # Schutz-Paket & Angriffs-Radar
 
-Wird auf Debian/Ubuntu mitinstalliert (`schutz/install-schutz.sh`), abschaltbar mit `--ohne-schutz`.
+Wird auf Debian/Ubuntu mitinstalliert (`schutz/install-schutz.sh`). Welche Teile, wählst du über die
+[Module](installation.md#module) (`fail2ban`, `ids`, `firewall`, `radar`, `cloudflare`) – auch nachträglich mit
+`sudo command-center module`. **IDS ohne fail2ban:** `ids-watch` sperrt dann selbst ins ipset `ids_ban4/6`
+(Ablauf `IDS_SPERRZEIT` in `schutz.conf`, Standard 1 Tag); Login-Sperren und automatische Radar-Sperren gibt es nur mit fail2ban.
 
 | Teil | Was es tut |
 |---|---|

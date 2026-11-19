@@ -1,5 +1,18 @@
 # Änderungen
 
+## 3.15.1 – 2026-11-19 · neue Lizenz
+
+- Das Repository steht ab jetzt unter der **Elastic License 2.0**: Nutzung auf eigenen Servern, Code lesen und ändern bleibt erlaubt; nicht erlaubt sind das Anbieten als gehosteter Dienst und das Entfernen oder Umgehen der Lizenzprüfung. Frühere Versionen (bis 3.15.0) bleiben MIT.
+
+## 3.15.0 – 2026-11-19 · Module, Lizenz, Spanisch, Hilfe mit Bildern
+
+- **Module frei wählbar:** Beim Installieren eine Liste zum An-/Abhaken – fail2ban, IDS, Firewall, Angriffs-Radar, Cloudflare, ntfy, PostgreSQL, Backup. **IDS geht jetzt auch ohne fail2ban** (sperrt dann selbst). Später: `sudo command-center module +postgres -ids`.
+- **Neues Modul Backup:** jede Nacht Einstellungen und Daten (SQLite konsistent, PostgreSQL-Dump) nach `/var/backups/command-center`, 14 Tage; `sudo command-center backup [--liste | --zurueck DATEI]`.
+- **Lizenz:** Schlüssel beim Installieren und bei Updates (anfragen: [lizenz.slxt.dev](https://lizenz.slxt.dev)), Karte unter Einstellungen, Hinweis 30 Tage vor Ablauf; danach läuft alles weiter, nur Updates sind gesperrt. Siehe docs/lizenz.md.
+- **Spanisch** als dritte Sprache (Oberfläche, Hilfe, Installer).
+- **Hilfe mit Bildern** je Bereich und **häufigen Fragen** (aufklappbar, durchsuchbar), Bild antippen = groß.
+- Installer: zweisprachige Fehler behoben (Update brach nach „Docker vorhanden“ ab, wenn keine Sprache angegeben war; abgebrochener Erstversuch galt als alte Installation).
+
 ## 3.14.0 – 2026-11-19 · Deutsch & Englisch
 
 - **Englische Oberfläche:** alle Seiten, Meldungen, Dialoge, Fehlermeldungen des Servers, Anmeldeseite, Hilfe sowie Datums- und Zahlenformate. Sprachwahl unter Einstellungen → Sprache und auf der Anmeldeseite; das Konto merkt sie sich auf allen Geräten.

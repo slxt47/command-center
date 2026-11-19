@@ -1,0 +1,33 @@
+# linux-dashboard-schutz -- Angriffs-Radar-Jails (Datei gehoert dem Paket).
+# angriffe-sammeln.py schreibt alle 2 min frische Web-Versuche nach /var/log/angriffe/web.log.
+# web-scan: 3 Scans (Geheimnis-Suche/Luecken-Scan) in 1 h · web-exploit: schon 1 Exploit-Versuch.
+# Sperre per ipset; mit CLOUDFLARE=1 zusaetzlich am Cloudflare-Rand (alle Seiten).
+[web-scan]
+enabled  = @@RADAR_ENABLED@@
+filter   = angriffe-web
+logpath  = /var/log/angriffe/web.log
+backend  = polling
+maxretry = 3
+findtime = 1h
+bantime  = 1d
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 4w
+ignoreip = @@IGNOREIP@@
+action   = audit-ipset
+           @@CF_BLOCK@@
+
+[web-exploit]
+enabled  = @@RADAR_ENABLED@@
+filter   = angriffe-exploit
+logpath  = /var/log/angriffe/web.log
+backend  = polling
+maxretry = 1
+findtime = 1h
+bantime  = 1d
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 4w
+ignoreip = @@IGNOREIP@@
+action   = audit-ipset
+           @@CF_BLOCK@@

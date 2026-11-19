@@ -4,39 +4,62 @@
 #   sudo command-center update          neueste Version holen und neu starten (Einstellungen bleiben)
 #   sudo command-center logs [-f]       Protokoll des Containers
 #   sudo command-center neustart        Container neu starten
-#   sudo command-center sprache de|en   Voreinstellung der Sprache (language) ändern
+#   sudo command-center sprache de|en|es   Voreinstellung der Sprache (language) ändern
+#   sudo command-center module [+name -name]  Module anzeigen / dazu / weg (fail2ban ids firewall radar cloudflare ntfy postgres backup)
+#   sudo command-center backup [--liste | --zurueck DATEI]   Sicherung jetzt / anzeigen / zurückspielen
+#   sudo command-center lizenz [SCHLÜSSEL]  Lizenz anzeigen bzw. neuen Schlüssel eintragen
 #   sudo command-center deinstallieren  Container und Programm entfernen (Daten bleiben, außer --alles)
 set -euo pipefail
 REPO=/opt/command-center
 ENVF=/etc/linux-dashboard/dashboard.env
 SPRACHE=$(sed -n 's/^CC_SPRACHE=//p' "$ENVF" 2>/dev/null | head -1 || true)
-t() { if [ "$SPRACHE" = en ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
-[ "$(id -u)" -eq 0 ] || { echo "$(t 'Bitte mit sudo ausführen.' 'Please run with sudo.')"; exit 1; }
-cd "$REPO" 2>/dev/null || { echo "$(t 'Command Center nicht gefunden' 'Command Center not found') ($REPO)."; exit 1; }
+t() { case "$SPRACHE" in en) printf '%s' "$2" ;; es) printf '%s' "${3:-$2}" ;; *) printf '%s' "$1" ;; esac; }
+[ "$(id -u)" -eq 0 ] || { echo "$(t 'Bitte mit sudo ausführen.' 'Please run with sudo.' 'Ejecútalo con sudo.')"; exit 1; }
+cd "$REPO" 2>/dev/null || { echo "$(t 'Command Center nicht gefunden' 'Command Center not found' 'Command Center no encontrado') ($REPO)."; exit 1; }
 compose() { if docker compose version >/dev/null 2>&1; then docker compose "$@"; else docker-compose "$@"; fi; }
 case "${1:-status}" in
   status)
     bash ./install.sh --status
     PORT=$(sed -n 's/^DASH_PORT=//p' /etc/linux-dashboard/dashboard.env 2>/dev/null); PORT=${PORT:-8420}
     IP="$( { hostname -I 2>/dev/null || ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p'; } | awk 'NR==1{print $1}' || true)"
-    echo "$(t 'Adresse:          ' 'Address:          ') http://${IP:-<server>}:$PORT  ($(t 'bzw.' 'or') http://localhost:$PORT)" ;;
+    echo "$(t 'Adresse:          ' 'Address:          ' 'Dirección:        ') http://${IP:-<server>}:$PORT  ($(t 'bzw.' 'or' 'o') http://localhost:$PORT)" ;;
   update)
     if [ -d .git ]; then git fetch -q --depth 1 origin main && git reset -q --hard origin/main
     else curl -fsSL https://raw.githubusercontent.com/slxt47/command-center/main/get.sh | bash -s -- --update; exit; fi
     exec bash ./install.sh --update --ja ;;
   logs)      shift; compose logs --tail 200 "$@" ;;
   neustart|restart)  compose restart ;;
-  sprache|language)
-    case "${2:-}" in de|en) ;; *) echo "sudo command-center sprache de|en   ($(t 'jetzt' 'now'): ${SPRACHE:-de})"; exit 1 ;; esac
+  module|modules)
+    alt=$(sed -n 's/^MODULE="\(.*\)"/\1/p' /etc/linux-dashboard/module.conf 2>/dev/null || true)
+    if [ $# -lt 2 ]; then
+      echo "$(t 'Module:' 'Modules:' 'Módulos:') ${alt:-–}"
+      echo "$(t 'Verfügbar:' 'Available:' 'Disponibles:') fail2ban ids firewall radar cloudflare ntfy postgres backup"
+      echo "sudo command-center module +postgres -ids"; exit 0
+    fi
+    neu=" $alt "; shift
+    for a in "$@"; do
+      m=${a#[+-]}
+      case "$m" in fail2ban|ids|firewall|radar|cloudflare|ntfy|postgres|backup) ;; *) echo "$(t 'Unbekanntes Modul' 'Unknown module' 'Módulo desconocido'): $m"; exit 1 ;; esac
+      neu=${neu// $m / }; case "$a" in -*) ;; *) neu="$neu $m " ;; esac
+    done
+    neu=$(echo $neu); echo "$(t 'Neu:' 'New:' 'Nuevo:') ${neu:-–}"
+    exec bash ./install.sh --update --ja --module "${neu:- }" ;;
+  backup)
+    command -v command-center-backup >/dev/null || { echo "$(t 'Backup-Modul nicht installiert:' 'Backup module not installed:' 'Módulo de copia no instalado:') sudo command-center module +backup"; exit 1; }
+    shift; exec command-center-backup "$@" ;;
+  lizenz|license|licencia)
+    shift; exec python3 "$REPO/dashboard/lizenz.py" "$@" ;;
+  sprache|language|idioma)
+    case "${2:-}" in de|en|es) ;; *) echo "sudo command-center sprache de|en|es   ($(t 'jetzt' 'now' 'ahora'): ${SPRACHE:-de})"; exit 1 ;; esac
     if grep -q '^CC_SPRACHE=' "$ENVF"; then sed -i "s/^CC_SPRACHE=.*/CC_SPRACHE=$2/" "$ENVF"; else echo "CC_SPRACHE=$2" >> "$ENVF"; fi
     compose up -d --force-recreate >/dev/null 2>&1 || compose restart
-    SPRACHE=$2; echo "$(t 'Sprache für neue Besucher: Deutsch. Jeder Benutzer kann sie in den Einstellungen ändern.' 'Language for new visitors: English. Every user can change it in the settings.')" ;;
+    SPRACHE=$2; echo "$(t 'Sprache für neue Besucher: Deutsch. Jeder Benutzer kann sie in den Einstellungen ändern.' 'Language for new visitors: English. Every user can change it in the settings.' 'Idioma para nuevos visitantes: español. Cada usuario puede cambiarlo en los ajustes.')" ;;
   deinstallieren)
-    read -rp "$(t 'Command Center entfernen? Daten in /var/lib/linux-dashboard bleiben (außer mit --alles). [j/N] ' 'Remove the Command Center? Data in /var/lib/linux-dashboard stays (unless --alles). [y/N] ')" a </dev/tty; case "$a" in j|J|y|Y) ;; *) exit 1 ;; esac
+    read -rp "$(t 'Command Center entfernen? Daten in /var/lib/linux-dashboard bleiben (außer mit --alles). [j/N] ' 'Remove the Command Center? Data in /var/lib/linux-dashboard stays (unless --alles). [y/N] ' '¿Eliminar el Command Center? Los datos de /var/lib/linux-dashboard se quedan (salvo con --alles). [s/N] ')" a </dev/tty; case "$a" in j|J|y|Y|s|S) ;; *) exit 1 ;; esac
     compose down || true
     rm -f /usr/local/bin/command-center
     if [ "${2:-}" = --alles ]; then rm -rf -- /var/lib/linux-dashboard /etc/linux-dashboard; fi
     cd / && rm -rf -- "$REPO"
-    echo "$(t 'Entfernt. Das Schutz-Paket (fail2ban/IDS) bleibt – vorher entfernen mit:' 'Removed. The protection package (fail2ban/IDS) stays – remove it beforehand with:') sudo bash /opt/command-center/schutz/install-schutz.sh --deinstallieren" ;;
-  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' ;;
+    echo "$(t 'Entfernt. Das Schutz-Paket (fail2ban/IDS) bleibt – vorher entfernen mit:' 'Removed. The protection package (fail2ban/IDS) stays – remove it beforehand with:' 'Eliminado. El paquete de protección (fail2ban/IDS) se queda: elimínalo antes con:') sudo bash /opt/command-center/schutz/install-schutz.sh --deinstallieren" ;;
+  *) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Command Center – Backup-Modul: sichert Einstellungen und Daten (jede Nacht per Timer, oder von Hand).
+#   command-center-backup                 jetzt sichern
+#   command-center-backup --liste         Sicherungen anzeigen
+#   command-center-backup --zurueck DATEI Sicherung zurückspielen (Container wird kurz gestoppt)
+# Ziel: /var/backups/command-center (BACKUP_ZIEL), aufbewahrt: BACKUP_TAGE (Standard 14) – in /etc/linux-dashboard/dashboard.env
+set -euo pipefail
+ENVF=/etc/linux-dashboard/dashboard.env
+wert() { sed -n "s/^$1=//p" "$ENVF" 2>/dev/null | head -1 || true; }
+ZIEL=$(wert BACKUP_ZIEL); ZIEL=${ZIEL:-/var/backups/command-center}
+TAGE=$(wert BACKUP_TAGE); TAGE=${TAGE:-14}
+DATA=/var/lib/linux-dashboard
+[ "$(id -u)" -eq 0 ] || { echo "sudo command-center backup"; exit 1; }
+umask 077; mkdir -p "$ZIEL"
+
+melden() {   # Fehler per ntfy (falls das Schutz-Paket ntfy eingerichtet hat)
+  local u t; u=$(sed -n 's/^NTFY_URL="\(.*\)"/\1/p' /etc/linux-dashboard/schutz.conf 2>/dev/null || true)
+  t=$(sed -n 's/^NTFY_TOPIC="\(.*\)"/\1/p' /etc/linux-dashboard/schutz.conf 2>/dev/null || true)
+  [ -n "$u" ] && [ -n "$t" ] && curl -fsS -m 10 -H "Title: Command Center Backup" -H "Priority: high" -d "$1" "$u/$t" >/dev/null 2>&1 || true
+}
+
+case "${1:-}" in
+  --liste|--list) ls -lh "$ZIEL"/cc-*.tar.gz 2>/dev/null || echo "– keine –"; exit 0 ;;
+  --zurueck|--restore)
+    f=${2:?Datei angeben}; [ -f "$f" ] || f="$ZIEL/$f"; [ -f "$f" ] || { echo "Nicht gefunden: $2"; exit 1; }
+    tar -tzf "$f" >/dev/null || { echo "Archiv beschädigt"; exit 1; }
+    docker stop linux-dashboard >/dev/null 2>&1 || true
+    "$0" >/dev/null 2>&1 || true            # Stand vor dem Zurückspielen sichern
+    tar -xzf "$f" -C / etc/linux-dashboard var/lib/linux-dashboard
+    docker start linux-dashboard >/dev/null 2>&1 || true
+    echo "Zurückgespielt: $f"; exit 0 ;;
+esac
+
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/var/lib" "$tmp/etc"
+# SQLite-Datenbanken konsistent kopieren (Backup-API), Rest einfach kopieren
+( cd "$DATA" && find . -type f ! -name '*.sqlite3' ! -name '*.sqlite3-*' ! -name '*.tmp' ! -path './profil-cache/*' -print0 \
+    | tar --null -cf - -T - ) | { mkdir -p "$tmp/var/lib/linux-dashboard"; tar -xf - -C "$tmp/var/lib/linux-dashboard"; }
+for db in "$DATA"/*.sqlite3; do
+  [ -f "$db" ] || continue
+  python3 - "$db" "$tmp/var/lib/linux-dashboard/$(basename "$db")" <<'P' || melden "SQLite-Sicherung fehlgeschlagen: $db"
+import sqlite3, sys
+a = sqlite3.connect(f'file:{sys.argv[1]}?mode=ro', uri=True); b = sqlite3.connect(sys.argv[2]); a.backup(b); b.close(); a.close()
+P
+done
+cp -a /etc/linux-dashboard "$tmp/etc/"
+# PostgreSQL-Modul: Dump dazu (nicht kritisch – der Schnellspeicher ist ein Zwischenspeicher)
+if docker inspect cc_db >/dev/null 2>&1; then
+  docker exec cc_db pg_dump -U cc -d cc 2>/dev/null | gzip > "$tmp/var/lib/linux-dashboard/cc_db.sql.gz" || true
+fi
+datei="$ZIEL/cc-$(date +%Y-%m-%d-%H%M).tar.gz"
+tar -czf "$datei.tmp" -C "$tmp" etc var && mv "$datei.tmp" "$datei" || { melden "Backup fehlgeschlagen"; exit 1; }
+find "$ZIEL" -name 'cc-*.tar.gz' -mtime +"$TAGE" -delete
+echo "Gesichert: $datei ($(du -h "$datei" | cut -f1))"

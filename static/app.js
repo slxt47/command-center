@@ -1788,7 +1788,57 @@ async function initUserRole() {
   // If currently on a restricted page, redirect to dashboard
   if (!pageAllowed(currentPage)) showPage('dashboard');
   loadPrefs();
+  if (isSuperadmin()) lizenzLaden();
   _zielOeffnen();
+}
+
+// 3.15.0: Lizenz – Karte in den Einstellungen, Balken oben, wenn sie bald abläuft oder ungültig ist (nur Superadmins)
+const _LZ_GRUND = { keine: 'Keine Lizenz eingetragen.', unbekannt: 'Diesen Schlüssel gibt es nicht.', gesperrt: 'Dieser Schlüssel ist gesperrt.',
+  abgelaufen: 'Die Lizenz ist abgelaufen – bitte verlängern.', netz: 'Lizenz seit Längerem nicht prüfbar (Lizenzserver nicht erreichbar).',
+  zu_viele_server: 'Dieser Schlüssel ist schon auf der erlaubten Zahl von Servern aktiv.' };
+async function lizenzLaden() {
+  const s = await api('/api/lizenz');
+  if (!s || s.error) return;
+  window._lizenz = s;
+  lizenzBalken(s); lizenzKarte(s);
+}
+function lizenzBalken(s) {
+  const b = document.getElementById('lizenz-balken'); if (!b) return;
+  let txt = '', art = 'warn';
+  if (!s.gueltig) { txt = _LZ_GRUND[s.grund] || _LZ_GRUND.keine; art = 'schlecht'; }
+  else if (s.tage_rest != null && s.tage_rest <= 30) txt = s.tage_rest === 0 ? 'Die Lizenz läuft heute ab.' : `Die Lizenz läuft in ${s.tage_rest} Tagen ab.`;
+  try { if (txt && sessionStorage.getItem('lz-weg') === txt) txt = ''; } catch (e) { /* privat */ }
+  b.hidden = !txt; if (!txt) return;
+  b.className = 'lizenz-balken ' + art;
+  b.innerHTML = `<span>${escHtml(txt)}</span><button class="btn btn-sm" type="button" data-lz="einst">Lizenz</button>` +
+    `<button class="lizenz-zu" type="button" aria-label="Ausblenden" data-lz="zu">✕</button>`;
+  b.onclick = (e) => {
+    const k = e.target.closest('[data-lz]'); if (!k) return;
+    if (k.dataset.lz === 'einst') showPage('settings');
+    else { try { sessionStorage.setItem('lz-weg', txt); } catch (x) { /* privat */ } b.hidden = true; }
+  };
+}
+function lizenzKarte(s) {
+  const el = document.getElementById('set-lizenz'); if (!el) return;
+  const datum = (t) => new Date(t * 1000).toLocaleDateString('de-DE');
+  el.innerHTML = !s.vorhanden ? `<dt>Status</dt><dd><span class="pille warn">keine</span> ${escHtml(_LZ_GRUND.keine)}</dd>`
+    : `<dt>Status</dt><dd><span class="pille ${s.gueltig ? 'gut' : 'schlecht'}">${s.gueltig ? 'gültig' : 'ungültig'}</span>${s.gueltig ? '' : ' ' + escHtml(_LZ_GRUND[s.grund] || s.grund || '')}</dd>` +
+      `<dt>Für</dt><dd>${escHtml(s.name || '–')}</dd><dt>Gültig bis</dt><dd>${s.bis ? datum(s.bis) + (s.tage_rest != null ? ` (${s.tage_rest} Tage)` : '') : 'unbegrenzt'}</dd>` +
+      `<dt>Server</dt><dd>bis ${escHtml(String(s.max_server || 1))}</dd><dt>Schlüssel</dt><dd><code>${escHtml(s.schluessel || '')}</code></dd>` +
+      `<dt>Geprüft</dt><dd>${s.geprueft ? datum(s.geprueft) : '–'}</dd>`;
+  const f = document.getElementById('set-lizenz-form');
+  if (f && !f._an) {
+    f._an = true;
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const inp = document.getElementById('set-lizenz-schluessel'), err = document.getElementById('set-lizenz-err');
+      err.textContent = '';
+      const r = await api('/api/lizenz', { method: 'POST', body: JSON.stringify({ schluessel: inp.value.trim() }) });
+      if (r && r.success) { inp.value = ''; toast('Lizenz eingetragen', 'success'); }
+      else { err.textContent = (r && r.error) || 'Das hat nicht geklappt.'; }
+      if (r && r.lizenz) { window._lizenz = r.lizenz; lizenzBalken(r.lizenz); lizenzKarte(r.lizenz); }
+    });
+  }
 }
 
 // Direktlinks (seit 10.11.2026): /#konten/<app>, /#backups, /#werkzeuge, /#startseite … – auch über die Anmeldung
@@ -7142,6 +7192,7 @@ async function dbStatusLaden() {
 
 function renderSettings() {
   dbStatusLaden();
+  if (isSuperadmin()) lizenzLaden();
   spracheKarte();
   const p = window._prefs;
   if (!p) { loadPrefs().then(() => window._prefs && renderSettings()); return; }

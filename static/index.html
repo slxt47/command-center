@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-title" content="Command Center">
 <title>Linux Command Center</title>
 <link rel="stylesheet" href="/app.css?v=3.1.0">
-<link rel="stylesheet" href="/ui.css?v=3.14.0">
+<link rel="stylesheet" href="/ui.css?v=3.15.0">
 </head>
 <body>
 
@@ -162,6 +162,7 @@
 
   <!-- ═══ Main Content ═══ -->
   <main class="main-content">
+    <div id="lizenz-balken" class="lizenz-balken" role="status" hidden></div>
 
     <!-- ══════════ DASHBOARD PAGE ══════════ -->
     <div id="page-dashboard" class="page active">
@@ -1013,6 +1014,17 @@
           <div class="card-header"><div class="card-title">Sprache</div></div>
           <p class="set-hint">Sprache der Oberfläche. Dein Konto merkt sie sich auf allen Geräten.</p>
           <div id="set-sprache" class="set-sprache" role="group" aria-label="Sprache · Language" translate="no"></div>
+        </div>
+        <div class="card sa-only" id="set-lizenz-karte">
+          <div class="card-header"><div class="card-title">Lizenz</div></div>
+          <dl class="dk-kv" id="set-lizenz"><dt>Status</dt><dd>lädt …</dd></dl>
+          <form class="set-form" id="set-lizenz-form" autocomplete="off">
+            <label class="conn-label" for="set-lizenz-schluessel">Neuer Lizenzschlüssel</label>
+            <input id="set-lizenz-schluessel" class="conn-input" placeholder="CC-XXXXX-XXXXX-XXXXX-XXXXX" maxlength="40" spellcheck="false" autocapitalize="characters">
+          </form>
+          <div id="set-lizenz-err" class="set-err"></div>
+          <div class="set-actions"><button class="btn btn-primary" type="submit" form="set-lizenz-form">Eintragen</button>
+            <a class="btn" href="https://lizenz.slxt.dev" target="_blank" rel="noopener noreferrer">Lizenz anfragen</a></div>
         </div>
         <div class="card sa-only" id="set-db-karte">
           <div class="card-header"><div class="card-title">Datenbank (Schnellspeicher)</div></div>
@@ -2042,7 +2054,7 @@
 <script src="/benutzer.js?v=3.10.0"></script>
 <script src="/docker-live.js?v=3.9.0"></script>
 <script src="/terminal-tabs.js?v=3.10.0"></script>
-<script src="/hilfe.js?v=3.14.0"></script>
+<script src="/hilfe.js?v=3.15.0"></script>
 
 </body>
 </html>

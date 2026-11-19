@@ -21,7 +21,7 @@ PREFS_FILE = DATA_DIR / "user_prefs.json"
 HIDEABLE_PAGES = ("startseite", "processes", "services", "updates", "terminal", "docker", "vms",
                   "connections", "browser", "security", "angriffe", "notifications", "users",
                   "konten", "codes", "backups", "automationen", "werkzeuge")
-SPRACHEN = ("de", "en")   # wie SPRACHEN in static/icons/i18n.js
+SPRACHEN = ("de", "en", "es")   # wie SPRACHEN in static/icons/i18n.js
 _MAX_KEY_LEN = 16384
 _lock = threading.Lock()
 

@@ -7,6 +7,10 @@
 # MODUS=sperren -> Zeilen IDS-ANGRIFF / IDS-AUSGANG, fail2ban sperrt
 MODUS=melden
 
+# Ohne fail2ban sperrt ids-watch selbst ins ipset ids_ban4/6 (setzt der Installer aus F2B_AKTIV).
+DIREKT_SPERREN=0
+SPERRZEIT=1d
+
 # Suricata-Schwere: 1 = hoch, 2 = mittel, 3 = niedrig. Gesperrt wird bis einschliesslich:
 MIN_SEVERITY_ANGRIFF=2
 MIN_SEVERITY_AUSGANG=2
