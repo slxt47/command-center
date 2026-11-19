@@ -1,5 +1,9 @@
 # Änderungen
 
+## 3.15.2 – 2026-11-19
+
+- Browser-Sitzungen zeigen die Uhrzeit des Servers statt UTC (einstellbar mit `CC_ZEITZONE` in dashboard.env).
+
 ## 3.15.1 – 2026-11-19 · neue Lizenz
 
 - Das Repository steht ab jetzt unter der **Elastic License 2.0**: Nutzung auf eigenen Servern, Code lesen und ändern bleibt erlaubt; nicht erlaubt sind das Anbieten als gehosteter Dienst und das Entfernen oder Umgehen der Lizenzprüfung. Frühere Versionen (bis 3.15.0) bleiben MIT.

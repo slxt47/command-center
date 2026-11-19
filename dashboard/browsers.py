@@ -86,6 +86,17 @@ RUNAWAY_CORES = _env_float("BROWSER_RUNAWAY_CORES", 2.5)
 RUNAWAY_WINDOW = 600
 _CLK_TCK = os.sysconf("SC_CLK_TCK")
 
+
+def _zeitzone():
+    """Zeitzone für Browser-Container: CC_ZEITZONE (dashboard.env), sonst die des Hosts, sonst Europe/Berlin."""
+    tz = os.environ.get("CC_ZEITZONE", "").strip()
+    if not tz:
+        try:   # pid host: /proc/1 ist der Host
+            tz = os.readlink("/proc/1/root/etc/localtime").split("zoneinfo/", 1)[1]
+        except (OSError, IndexError):
+            tz = ""
+    return tz if re.fullmatch(r"[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}", tz or "") else "Europe/Berlin"
+
 class BrowserSessionManager:
     """Launches and manages browser containers (kasmweb/firefox, etc.) via Docker."""
 
@@ -248,6 +259,7 @@ class BrowserSessionManager:
         ]
         if not audio:
             env += ["KASM_SVC_AUDIO=0", "KASM_SVC_AUDIO_INPUT=0"]
+        env.append(f"TZ={_zeitzone()}")   # Uhrzeit im Browser wie am Server (sonst UTC)
 
         body = {
             "Image": image,
