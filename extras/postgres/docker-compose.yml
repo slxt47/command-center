@@ -1,0 +1,86 @@
+# cc_db – PostgreSQL für den Schnellspeicher des Command Centers (optional, siehe docs/datenbank.md)
+# cc_db_replica (seit 19.11.2026, 3.12.0): laufende Kopie per Streaming-Replikation (Slot cc_replica), nur lesbar,
+# 127.0.0.1:5440. Fällt cc_db aus, liest das Command Center von hier weiter. Zur Haupt-DB machen: ./umschalten.sh
+# Enthält nur „unwichtige“ Daten: den Schnellspeicher (Zwischenspeicher langsamer Abfragen). Fällt er aus, nimmt das
+# Command Center automatisch wieder SQLite (/var/lib/linux-dashboard/schnellspeicher.sqlite3) – nichts geht verloren.
+# Erreichbar NUR über 127.0.0.1:5439 (das Command Center läuft im Host-Netz). Passwort in .env (0600) und als Kopie
+# in /var/lib/linux-dashboard/pg.env (0600, root) – legt einrichten.sh an.
+services:
+  cc_db:
+    image: postgres:16.16-alpine@sha256:81e77a4833487b8132fe4b00bedd39dc3f74b8641e387f19312a48f7de218c2e
+    container_name: cc_db
+    restart: unless-stopped
+    environment:
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+      - "POSTGRES_USER=cc"
+      - "POSTGRES_DB=cc"
+      - "POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=trust"
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40", "-c", "listen_addresses=*",
+              "-c", "password_encryption=scram-sha-256", "-c", "log_min_duration_statement=2000"]
+    ports:
+      - "127.0.0.1:5439:5432"
+    volumes:
+      - "./daten:/var/lib/postgresql/data"
+    tmpfs:
+      - /var/run/postgresql:uid=70,gid=70,mode=0775
+      - /tmp
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    mem_limit: 256m
+    pids_limit: 100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cc -d cc -q"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [cc_db_netz]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+
+  cc_db_replica:
+    image: postgres:16.16-alpine@sha256:81e77a4833487b8132fe4b00bedd39dc3f74b8641e387f19312a48f7de218c2e
+    container_name: cc_db_replica
+    restart: unless-stopped
+    depends_on: [cc_db]
+    entrypoint: ["/replica-start.sh"]
+    environment:
+      - "REPL_PASSWORD=${REPL_PASSWORD}"
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40", "-c", "listen_addresses=*",
+              "-c", "hot_standby=on", "-c", "hot_standby_feedback=on", "-c", "log_min_duration_statement=2000"]
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - "./daten-replica:/var/lib/postgresql/data"
+      - "./replica-start.sh:/replica-start.sh:ro"
+    tmpfs:
+      - /var/run/postgresql:uid=70,gid=70,mode=0775
+      - /tmp
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    mem_limit: 256m
+    pids_limit: 100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cc -d cc -q"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks: [cc_db_netz]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+
+networks:
+  cc_db_netz:
+    name: cc_db_netz
+    ipam:
+      config:
+        - subnet: 10.250.76.0/28

@@ -1,0 +1,10 @@
+[Unit]
+Description=Angriffs-Radar alle 2 Minuten sammeln
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

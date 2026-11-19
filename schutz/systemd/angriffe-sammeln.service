@@ -1,0 +1,10 @@
+[Unit]
+Description=Angriffs-Radar: Versuche aus Web-Protokollen, fail2ban und IDS sammeln (Command Center)
+After=docker.service fail2ban.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/angriffe-sammeln.py
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=10min

@@ -1,0 +1,32 @@
+{
+  "einbettungen": {
+    "konten": [
+      {
+        "id": "hosting",
+        "name": "Hosting",
+        "port": 9301,
+        "host": "hosting.example.org",
+        "token": null
+      }
+    ],
+    "werkzeuge": [
+      {
+        "id": "tools",
+        "name": "IT-Tools",
+        "port": 8090,
+        "host": "localhost"
+      }
+    ]
+  },
+  "startseite": {
+    "url": "https://start.example.org"
+  },
+  "automationen": {
+    "url": "https://n8n.example.org"
+  },
+  "profilbild_ebenen": false,
+  "iso_verzeichnisse": [
+    "/var/lib/libvirt/images"
+  ],
+  "ntfy_senden": ""
+}

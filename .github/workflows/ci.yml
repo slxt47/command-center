@@ -1,0 +1,16 @@
+name: Prüfen
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions: { contents: read }
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python
+        run: python3 -m py_compile server.py dashboard/*.py schutz/sbin/*.py schutz/lib/*.py
+      - name: JavaScript
+        run: for f in static/*.js; do node --check "$f"; done
+      - name: Shell
+        run: for f in install.sh get.sh scripts/command-center extras/postgres/*.sh schutz/*.sh; do bash -n "$f"; done

@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- PWA / Installierbarkeit (additiv, ändert kein bestehendes Verhalten) -->
+<meta name="theme-color" content="#f4f1fb">
+<meta name="color-scheme" content="light">
+<script src="/icons/modus.js?v=6"></script>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Command Center">
+<title>Linux Command Center</title>
+<link rel="stylesheet" href="/app.css?v=3.1.0">
+<link rel="stylesheet" href="/ui.css?v=3.13.0">
+</head>
+<body>
+
+<div class="app-layout">
+  <!-- ═══ Navigation (3.0.0): Seitenleiste mit Gruppen; am Handy Tableiste + „Mehr“ (dieselbe Leiste als Blatt) ═══ -->
+  <nav class="sidebar" id="seitenleiste" aria-label="Hauptmenü">
+    <div class="sb-kopf">
+      <div class="sidebar-logo"><img src="/favicon.svg" alt="" width="36" height="36"></div>
+      <div class="sb-name"><b>Command Center</b><span id="sb-host">Server</span></div>
+      <button class="sb-knopf sb-einklappen" type="button" onclick="navEinklappen()" aria-label="Seitenleiste einklappen" aria-controls="seitenleiste" aria-expanded="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+      </button>
+      <button class="sb-knopf sb-schliessen" type="button" onclick="navMehr(false)" aria-label="Menü schließen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <button class="sb-suche" type="button" onclick="paletteOeffnen()" aria-label="Springen zu … (Strg+K)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="nav-label">Springen zu …</span><kbd class="nav-label">⌘K</kbd>
+    </button>
+    <div class="nav-items">
+      <div class="nav-gruppe" role="group" aria-label="Übersicht">
+        <div class="nav-gruppe-titel" aria-hidden="true">Übersicht</div>
+        <button id="nav-btn-dashboard" class="nav-item active" type="button" onclick="showPage('dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span class="nav-label">Übersicht</span><span class="nav-tooltip" aria-hidden="true">Übersicht</span>
+        </button>
+        <button id="nav-btn-startseite" class="nav-item" type="button" onclick="showPage('startseite')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+          <span class="nav-label">Mein Dashboard</span><span class="nav-tooltip" aria-hidden="true">Mein Dashboard</span>
+        </button>
+      </div>
+      <div class="nav-gruppe" role="group" aria-label="System">
+        <div class="nav-gruppe-titel" aria-hidden="true">System</div>
+        <button id="nav-btn-processes" class="nav-item" type="button" onclick="showPage('processes')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span class="nav-label">Prozesse</span><span class="nav-tooltip" aria-hidden="true">Prozesse</span>
+        </button>
+        <button id="nav-btn-services" class="nav-item" type="button" onclick="showPage('services')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6"/></svg>
+          <span class="nav-label">Dienste</span><span class="nav-tooltip" aria-hidden="true">Dienste</span>
+        </button>
+        <button id="nav-btn-updates" class="nav-item" type="button" onclick="showPage('updates')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="nav-label">Updates</span><span class="nav-tooltip" aria-hidden="true">Updates</span>
+        </button>
+        <button id="nav-btn-terminal" class="nav-item" type="button" onclick="showPage('terminal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span class="nav-label">Terminal</span><span class="nav-tooltip" aria-hidden="true">Terminal</span>
+        </button>
+      </div>
+      <div class="nav-gruppe" role="group" aria-label="Container & VMs">
+        <div class="nav-gruppe-titel" aria-hidden="true">Container & VMs</div>
+        <button id="nav-btn-docker" class="nav-item" type="button" onclick="showPage('docker')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="10" width="3.4" height="3.4"/><rect x="7.3" y="10" width="3.4" height="3.4"/><rect x="11.6" y="10" width="3.4" height="3.4"/><rect x="7.3" y="5.9" width="3.4" height="3.4"/><rect x="11.6" y="5.9" width="3.4" height="3.4"/><path d="M2 14.2h14.4c2.3 0 4-1.1 4.6-3.1-1.3-.7-2.8-.5-3.5.3"/><path d="M2 14.2c.2 3.6 2.6 5.6 6.6 5.6 4.7 0 8-2.2 9.3-6.3"/></svg>
+          <span class="nav-label">Docker</span><span class="nav-tooltip" aria-hidden="true">Docker</span>
+        </button>
+        <button id="nav-btn-vms" class="nav-item" type="button" onclick="showPage('vms')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span class="nav-label">Virtuelle Maschinen</span><span class="nav-tooltip" aria-hidden="true">Virtuelle Maschinen</span>
+        </button>
+      </div>
+      <div class="nav-gruppe" role="group" aria-label="Zugriff">
+        <div class="nav-gruppe-titel" aria-hidden="true">Zugriff</div>
+        <button id="nav-btn-connections" class="nav-item" type="button" onclick="showPage('connections')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/><circle cx="20" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="20" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="20" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+          <span class="nav-label">Verbindungen</span><span class="nav-tooltip" aria-hidden="true">Verbindungen</span>
+        </button>
+        <button id="nav-btn-browser" class="nav-item" type="button" onclick="showPage('browser')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>
+          <span class="nav-label">Browser</span><span class="nav-tooltip" aria-hidden="true">Browser</span>
+        </button>
+      </div>
+      <div class="nav-gruppe" role="group" aria-label="Sicherheit">
+        <div class="nav-gruppe-titel" aria-hidden="true">Sicherheit</div>
+        <button id="nav-btn-security" class="nav-item" type="button" onclick="showPage('security')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span class="nav-label">Sicherheit & Sperren</span><span class="nav-tooltip" aria-hidden="true">Sicherheit & Sperren</span>
+        </button>
+        <button id="nav-btn-angriffe" class="nav-item" type="button" onclick="showPage('angriffe')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+          <span class="nav-label">Angriffe</span><span class="nav-tooltip" aria-hidden="true">Angriffe</span>
+        </button>
+        <button id="nav-btn-notifications" class="nav-item" type="button" onclick="showPage('notifications')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="nav-label">Benachrichtigungen</span><span class="nav-tooltip" aria-hidden="true">Benachrichtigungen</span>
+        </button>
+        <button id="nav-btn-users" class="nav-item" type="button" onclick="showPage('users')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="nav-label">Benutzer</span><span class="nav-tooltip" aria-hidden="true">Benutzer</span>
+        </button>
+      </div>
+      <div class="nav-gruppe" role="group" aria-label="Konten & Werkzeuge">
+        <div class="nav-gruppe-titel" aria-hidden="true">Konten & Werkzeuge</div>
+        <button id="nav-btn-konten" class="nav-item" type="button" onclick="showPage('konten')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+          <span class="nav-label">Konten</span><span class="nav-tooltip" aria-hidden="true">Konten</span>
+        </button>
+        <button id="nav-btn-codes" class="nav-item" type="button" onclick="showPage('codes')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2"/><path d="m17 6 3 3"/><path d="m14.5 8.5 2.5 2.5"/></svg>
+          <span class="nav-label">Codes</span><span class="nav-tooltip" aria-hidden="true">Codes</span>
+        </button>
+        <button id="nav-btn-backups" class="nav-item" type="button" onclick="showPage('backups')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+          <span class="nav-label">Backups</span><span class="nav-tooltip" aria-hidden="true">Backups</span>
+        </button>
+        <button id="nav-btn-automationen" class="nav-item" type="button" onclick="showPage('automationen')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 6h9M6.3 8.2l4.4 7.6M17.7 8.2l-4.4 7.6"/></svg>
+          <span class="nav-label">Automationen</span><span class="nav-tooltip" aria-hidden="true">Automationen</span>
+        </button>
+        <button id="nav-btn-werkzeuge" class="nav-item" type="button" onclick="showPage('werkzeuge')" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>
+          <span class="nav-label">IT-Tools</span><span class="nav-tooltip" aria-hidden="true">IT-Tools</span>
+        </button>
+      </div>
+    </div>
+    <div class="sb-fuss">
+      <button id="nav-btn-hilfe" class="nav-item" type="button" onclick="showPage('hilfe')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5"/><path d="M12 17.5h.01"/></svg>
+        <span class="nav-label">Hilfe</span><span class="nav-tooltip" aria-hidden="true">Hilfe</span>
+      </button>
+      <button id="nav-btn-settings" class="nav-item" type="button" onclick="showPage('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="nav-label">Einstellungen</span><span class="nav-tooltip" aria-hidden="true">Einstellungen</span>
+      </button>
+      <div class="sb-konto">
+        <button type="button" class="sb-konto-knopf" id="nav-btn-konto" onclick="showPage('konto')" aria-label="Mein Konto">
+          <span class="sb-avatar avatar" id="sb-avatar" aria-hidden="true">?</span>
+          <span class="sb-benutzer nav-label"><b id="sb-benutzer">…</b><span id="sb-rolle"></span></span>
+          <span class="nav-tooltip" aria-hidden="true">Mein Konto</span>
+        </button>
+        <button class="sb-knopf modus-knopf" type="button" data-modus-schalter></button>
+        <button class="sb-knopf" type="button" onclick="window.location.href='/logout'" aria-label="Abmelden" title="Abmelden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <div class="sb-schleier" onclick="navMehr(false)" aria-hidden="true"></div>
+  <nav class="tableiste" id="tableiste" aria-label="Schnellzugriff"></nav>
+
+  <!-- ═══ Main Content ═══ -->
+  <main class="main-content">
+
+    <!-- ══════════ DASHBOARD PAGE ══════════ -->
+    <div id="page-dashboard" class="page active">
+      <div class="header-bar">
+        <div>
+          <h1 class="header-title"><span>Server</span>übersicht</h1>
+          <div class="header-meta" style="margin-top:8px">
+            <span class="kopf-pille" id="sys-zustand"><span class="status-dot"></span><b id="sys-hostname">Lade …</b></span>
+            <span class="kopf-pille">Läuft seit <b id="sys-uptime">—</b></span>
+            <span class="kopf-pille" id="sys-os">—</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="seg" role="group" aria-label="Zeitraum der Graphen">
+            <button type="button" data-bereich="15m" aria-pressed="false">15 Min</button>
+            <button type="button" data-bereich="1h" aria-pressed="true">1 Std</button>
+            <button type="button" data-bereich="6h" aria-pressed="false">6 Std</button>
+            <button type="button" data-bereich="24h" aria-pressed="false">24 Std</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-reihe" aria-label="Kennzahlen">
+        <section class="kpi kpi-link" aria-labelledby="kpi-cpu-t" data-graph="g-last" tabindex="0" role="button" aria-description="CPU-Verlauf zeigen">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg><span id="kpi-cpu-t">CPU</span><span class="kpi-zusatz" id="cpu-cores">—</span></div>
+          <div class="kpi-wert"><span id="cpu-usage">–</span><small>%</small></div>
+          <div class="kpi-funke" id="funke-cpu"></div>
+          <div class="kpi-unter">Last <b id="cpu-load">—</b></div>
+        </section>
+        <section class="kpi kpi-link" aria-labelledby="kpi-ram-t" data-graph="g-last" tabindex="0" role="button" aria-description="Arbeitsspeicher-Verlauf zeigen">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7v10M10 7v10M14 7v10M18 7v10"/></svg><span id="kpi-ram-t">Arbeitsspeicher</span><span class="kpi-zusatz" id="mem-total">—</span></div>
+          <div class="kpi-wert"><span id="mem-percent">–</span><small>%</small></div>
+          <div class="kpi-funke" id="funke-ram"></div>
+          <div class="kpi-unter"><b id="mem-used">—</b> belegt · <span id="mem-available">—</span> frei</div>
+        </section>
+        <section class="kpi kpi-link" aria-labelledby="kpi-net-t" data-graph="g-netz" tabindex="0" role="button" aria-description="Datenverkehr zeigen">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17V7M7 7l-3 3M7 7l3 3"/><path d="M17 7v10M17 17l-3-3M17 17l3-3"/></svg><span id="kpi-net-t">Netzwerk</span><span class="kpi-zusatz" id="net-iface">—</span></div>
+          <div class="kpi-wert zwei"><span><i aria-label="eingehend">↓</i><b id="net-rx">–</b></span><span><i aria-label="ausgehend">↑</i><b id="net-tx">–</b></span></div>
+          <div class="kpi-funke" id="funke-net"></div>
+          <div class="kpi-unter">Spitze 1 Std <b id="net-spitze">—</b></div>
+        </section>
+        <section class="kpi kpi-link" aria-labelledby="kpi-disk-t" data-graph="g-io" tabindex="0" role="button" aria-description="Datenträger-Verlauf zeigen">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.7-4 3-9 3s-9-1.3-9-3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg><span id="kpi-disk-t">Speicherplatz</span><span class="kpi-zusatz" id="disk-root-name">/</span></div>
+          <div class="kpi-wert"><span id="disk-root-pct">–</span><small>%</small></div>
+          <div class="progress-track" style="margin:14px 0 10px"><div class="progress-fill" id="disk-root-bar" style="width:0%"></div></div>
+          <div class="kpi-unter"><b id="disk-root-frei">—</b> frei von <span id="disk-root-total">—</span></div>
+          <div class="platte-hinweis" id="disk-root-hinweis" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <div class="raster raster-2">
+        <section class="card g-karte" aria-labelledby="g-last-t">
+          <div class="card-header"><h2 class="card-title" id="g-last-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Auslastung</h2><button type="button" class="btn btn-sm knopf-tabelle" aria-pressed="false" data-graph="g-last">Tabelle</button></div>
+          <div id="g-last"></div>
+        </section>
+        <section class="card g-karte" aria-labelledby="g-netz-t">
+          <div class="card-header"><h2 class="card-title" id="g-netz-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17V7M7 7l-3 3M7 7l3 3"/><path d="M17 7v10M17 17l-3-3M17 17l3-3"/></svg>Datenverkehr</h2><button type="button" class="btn btn-sm knopf-tabelle" aria-pressed="false" data-graph="g-netz">Tabelle</button></div>
+          <div id="g-netz"></div>
+        </section>
+        <section class="card g-karte" aria-labelledby="g-io-t">
+          <div class="card-header"><h2 class="card-title" id="g-io-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.7-4 3-9 3s-9-1.3-9-3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>Datenträger lesen &amp; schreiben</h2><button type="button" class="btn btn-sm knopf-tabelle" aria-pressed="false" data-graph="g-io">Tabelle</button></div>
+          <div id="g-io"></div>
+        </section>
+        <section class="card" aria-labelledby="kerne-t">
+          <div class="card-header"><h2 class="card-title" id="kerne-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M9 20V4M14 20v-7M19 20V8"/></svg>Kerne</h2><span class="kpi-zusatz" id="cpu-model">—</span></div>
+          <div class="kerne" id="cpu-cores-bars" role="list" aria-label="Auslastung je Kern"></div>
+          <div class="info-row" style="margin-top:14px"><span class="info-label">Last (1 · 5 · 15 min)</span><span class="info-value" id="cpu-load-3">—</span></div>
+          <div class="info-row"><span class="info-label">Auslagerung (Swap)</span><span class="info-value" id="mem-swap">—</span></div>
+          <div class="info-row"><span class="info-label">Zwischenspeicher (Cache)</span><span class="info-value" id="mem-cached">—</span></div>
+        </section>
+      </div>
+
+      <div class="raster raster-3">
+        <section class="card" aria-labelledby="platten-t">
+          <div class="card-header"><h2 class="card-title" id="platten-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.7-4 3-9 3s-9-1.3-9-3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg>Datenträger</h2></div>
+          <div id="disk-list"><div class="loading-overlay"><span class="spinner"></span> Lade …</div></div>
+        </section>
+        <section class="card" aria-labelledby="netz-t">
+          <div class="card-header"><h2 class="card-title" id="netz-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>Schnittstellen</h2></div>
+          <div id="network-list"><div class="loading-overlay"><span class="spinner"></span> Lade …</div></div>
+        </section>
+        <section class="card" aria-labelledby="system-t">
+          <div class="card-header"><h2 class="card-title" id="system-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>System</h2></div>
+          <div id="system-details"><div class="loading-overlay"><span class="spinner"></span> Lade …</div></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ══════════ MEIN KONTO (3.1.0, jede Rolle): static/konto.js, dashboard/konto.py ══════════ -->
+    <div id="page-konto" class="page">
+      <div class="header-bar">
+        <div class="konto-kopf">
+          <span class="avatar avatar-gross" id="ko-avatar-gross" aria-hidden="true"></span>
+          <div>
+            <h1 class="header-title"><span>Mein</span> Konto</h1>
+            <div class="header-meta" style="margin-top:6px"><span class="kopf-pille"><b id="ko-name">…</b></span><span class="kopf-pille" id="ko-rolle">…</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="raster raster-2">
+        <section class="card" aria-labelledby="ko-bild-t">
+          <div class="card-header"><h2 class="card-title" id="ko-bild-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Profilbild</h2></div>
+          <div class="ko-bildwahl" role="radiogroup" aria-label="Profilbild wählen">
+            <button type="button" role="radio" data-art="slxt" aria-checked="false"><span class="avatar" data-vorschau="slxt"></span><span id="ko-ebenen-name">Ebenen-Bild</span></button>
+            <button type="button" role="radio" data-art="bild" aria-checked="false"><span class="avatar" data-vorschau="bild"></span><span>Eigenes Bild</span></button>
+            <button type="button" role="radio" data-art="initial" aria-checked="false"><span class="avatar" data-vorschau="initial"></span><span>Initiale</span></button>
+          </div>
+          <div class="ko-zeile">
+            <label class="btn" for="ko-datei" tabindex="0" role="button" id="ko-datei-knopf">Bild hochladen …</label>
+            <input type="file" id="ko-datei" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only" tabindex="-1">
+            <button type="button" class="btn btn-danger" id="ko-bild-weg">Eigenes Bild entfernen</button>
+          </div>
+          <form class="ko-zeile" id="ko-github">
+            <label class="sr-only" for="ko-github-name">GitHub-Name</label>
+            <input type="text" id="ko-github-name" placeholder="GitHub-Name, z. B. octocat" autocomplete="off" spellcheck="false" autocapitalize="none">
+            <button type="submit" class="btn">Von GitHub übernehmen</button>
+          </form>
+          <p class="set-hint" style="margin:8px 0 0">Hochgeladene Bilder werden auf dem Server quadratisch zugeschnitten und neu gespeichert (256 px, ohne Metadaten).</p>
+        </section>
+
+        <section class="card" aria-labelledby="ko-pw-t">
+          <div class="card-header"><h2 class="card-title" id="ko-pw-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Passwort ändern</h2>
+            <span class="kpi-zusatz" id="ko-pw-datum"></span></div>
+          <p class="set-hint" id="ko-pw-hinweis">Das ist dein Linux-Passwort auf dem Server. Nach dem Ändern werden alle anderen Geräte abgemeldet.</p>
+          <form id="ko-pw" class="set-form" autocomplete="on">
+            <input type="text" autocomplete="username" id="ko-pw-benutzer" hidden>
+            <label class="conn-label" for="ko-pw-alt">Aktuelles Passwort</label>
+            <input type="password" id="ko-pw-alt" autocomplete="current-password" required>
+            <label class="conn-label" for="ko-pw-neu">Neues Passwort</label>
+            <input type="password" id="ko-pw-neu" autocomplete="new-password" required aria-describedby="ko-pw-regeln">
+            <div class="pw-staerke" id="ko-pw-staerke"><span class="pw-balken" aria-hidden="true"></span><span class="pw-text" aria-live="polite">Stärke: –</span></div>
+            <ul class="pw-regeln" id="ko-pw-regeln" aria-label="Passwort-Regeln"></ul>
+            <label class="conn-label" for="ko-pw-wdh">Neues Passwort wiederholen</label>
+            <input type="password" id="ko-pw-wdh" autocomplete="new-password" required>
+            <label class="conn-check"><input type="checkbox" id="ko-pw-zeigen"> Passwörter anzeigen</label>
+            <div class="set-actions"><button type="submit" class="btn btn-primary" id="ko-pw-knopf" disabled>Passwort ändern</button></div>
+            <div class="set-err" id="ko-pw-fehler" role="alert"></div>
+          </form>
+        </section>
+
+        <section class="card" aria-labelledby="ko-mail-t">
+          <div class="card-header"><h2 class="card-title" id="ko-mail-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>E-Mail zur Wiederherstellung</h2>
+            <span class="pille neutral" id="ko-mail-status">keine</span></div>
+          <p class="set-hint">Damit kannst du dein Passwort auf der Anmeldeseite über „Passwort vergessen?“ mit einem Code zurücksetzen. Jede Änderung meldet ntfy.</p>
+          <div id="ko-mail-aktuell" class="info-row" hidden><span class="info-label">Hinterlegt</span><span class="info-value" id="ko-mail-adresse"></span></div>
+          <form id="ko-mail" class="ko-zeile">
+            <label class="sr-only" for="ko-mail-neu">E-Mail-Adresse</label>
+            <input type="email" id="ko-mail-neu" placeholder="name@beispiel.at" autocomplete="email" required>
+            <button type="submit" class="btn">Code senden</button>
+          </form>
+          <form id="ko-mail-code" class="ko-zeile" hidden>
+            <label class="sr-only" for="ko-mail-code-ein">Code aus der E-Mail</label>
+            <input type="text" id="ko-mail-code-ein" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-stelliger Code" required>
+            <button type="submit" class="btn btn-primary">Bestätigen</button>
+          </form>
+          <div class="set-actions"><button type="button" class="btn btn-danger" id="ko-mail-weg" hidden>E-Mail entfernen</button></div>
+          <div class="set-err" id="ko-mail-fehler" role="alert"></div>
+        </section>
+
+        <section class="card" aria-labelledby="ko-sitz-t">
+          <div class="card-header"><h2 class="card-title" id="ko-sitz-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="4" width="14" height="11" rx="2"/><rect x="15" y="9" width="7" height="11" rx="1.5"/><path d="M6 19h6"/></svg>Geräte</h2></div>
+          <p class="set-hint">Meldet dich überall ab, außer hier. Sinnvoll, wenn du dich auf einem fremden Gerät angemeldet hast.</p>
+          <div class="set-actions"><button type="button" class="btn" id="ko-andere-ab">Auf allen anderen Geräten abmelden</button></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ══════════ PROCESSES PAGE ══════════ -->
+    <div id="page-processes" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Prozesse</span></h1>
+        <div class="header-actions">
+          <button class="btn" onclick="loadProcesses()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aktualisieren
+          </button>
+        </div>
+      </div>
+      <div class="card" style="overflow-x:auto; max-height: calc(100vh - 160px); overflow-y: auto;">
+        <table class="process-table">
+          <thead>
+            <tr>
+              <th>PID</th>
+              <th>User</th>
+              <th>CPU %</th>
+              <th>MEM %</th>
+              <th>Status</th>
+              <th>Command</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="process-tbody">
+            <tr><td colspan="7"><div class="loading-overlay"><span class="spinner"></span> Lade Prozesse...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ TERMINAL PAGE ══════════ -->
+    <div id="page-terminal" class="page">
+      <div class="header-bar">
+        <div style="min-width:0;overflow:hidden;flex:1;">
+          <h1 class="header-title"><span>Terminal</span></h1>
+          <div class="term-subtitle" style="font-family:var(--font-mono);font-size:12px;margin-top:3px;display:flex;align-items:center;gap:0;white-space:nowrap;overflow:hidden;">
+            <span id="term-hdr-user" style="color:var(--accent);flex-shrink:0;">root</span><span style="color:var(--text-muted);flex-shrink:0;">@</span><span id="term-hdr-host" class="term-host-trunc" style="color:var(--accent);">host</span><span style="color:var(--text-muted);margin:0 2px;flex-shrink:0;">:</span><span id="term-hdr-cwd" style="color:#60a5fa;flex-shrink:0;">~</span>
+          </div>
+        </div>
+        <div class="term-actions">
+          <button class="btn btn-sm" onclick="termToggleKeys()" id="btn-term-keys" title="Tastenleisten ein-/ausblenden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+            <span class="btn-label">Tasten</span>
+          </button>
+          <button class="btn btn-sm" onclick="termCopyAll()" title="Sichtbaren Inhalt kopieren">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span class="btn-label">Kopieren</span>
+          </button>
+          <button class="btn btn-sm" onclick="termReconnect()" title="Neu verbinden – die Sitzung im Tab läuft weiter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span class="btn-label">Neu</span>
+          </button>
+          <button class="btn btn-sm" onclick="clearTerminal()" title="Bildschirm und Rückblick leeren">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+            <span class="btn-label">Clear</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal-Tabs (3.9.0): laufen auf dem Server weiter (tmux), bis sie geschlossen werden -->
+      <div class="term-tabs" id="term-tabs">
+        <div class="term-tab-liste" id="term-tab-liste" role="group" aria-label="Terminals"></div>
+        <div class="term-tab-werkzeug">
+          <button type="button" class="term-tab-neu" data-fl="neu" id="term-tab-neu" title="Neues Terminal (Alt+T)" aria-label="Neues Terminal">+</button>
+          <button type="button" class="term-tab-layout" data-fl="layout" id="term-tab-layout" aria-pressed="false" title="Tabs seitlich anzeigen" aria-label="Tabs seitlich anzeigen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <dialog class="bg-dialog" id="term-tab-dialog" aria-labelledby="ttd-titel">
+        <form method="dialog" class="bg-dialog-form" id="ttd-form" novalidate>
+          <header><h2 id="ttd-titel">Terminal</h2><button type="button" class="bg-x" data-schliessen aria-label="Schließen">✕</button></header>
+          <div class="bg-dialog-inhalt">
+            <label class="bg-feld"><span>Name</span><input class="conn-input" name="titel" maxlength="30" required autocomplete="off"></label>
+            <label class="bg-wahl"><input type="checkbox" name="angeheftet"><span><b>Anheften</b><small>Bleibt ganz vorne und lässt sich nicht versehentlich schließen.</small></span></label>
+            <div class="ttd-verschieben" role="group" aria-label="Position">
+              <span class="ttd-label">Position <b id="ttd-pos"></b></span>
+              <div class="ttd-knoepfe">
+                <button type="button" class="btn btn-sm" data-schiebe="anfang" title="Ganz nach vorne">⇤</button>
+                <button type="button" class="btn btn-sm" data-schiebe="-1">← Nach vorne</button>
+                <button type="button" class="btn btn-sm" data-schiebe="1">Nach hinten →</button>
+                <button type="button" class="btn btn-sm" data-schiebe="ende" title="Ganz nach hinten">⇥</button>
+              </div>
+              <small class="bg-leise">Tipp: Tabs lassen sich auch direkt mit der Maus ziehen.</small>
+            </div>
+            <p class="bg-fehler" id="ttd-fehler" role="alert" hidden></p>
+          </div>
+          <footer><button type="button" class="btn btn-danger" id="ttd-schliessen-tab">Terminal schließen</button><span class="bg-luecke"></span>
+            <button type="button" class="btn" data-schliessen>Abbrechen</button><button type="submit" class="btn btn-primary">Speichern</button></footer>
+        </form>
+      </dialog>
+
+      <!-- Quick commands bar -->
+      <div class="term-quick-bar">
+        <button class="term-quick" onclick="quickCmd('ls -la')">ls -la</button>
+        <button class="term-quick" onclick="quickCmd('pwd')">pwd</button>
+        <button class="term-quick" onclick="quickCmd('cd ..')">cd ..</button>
+        <button class="term-quick" onclick="quickCmd('cd ~')">cd ~</button>
+        <button class="term-quick" onclick="quickCmd('df -h')">df -h</button>
+        <button class="term-quick" onclick="quickCmd('free -h')">free -h</button>
+        <button class="term-quick" onclick="quickCmd('uptime')">uptime</button>
+        <button class="term-quick" onclick="quickCmd('ps aux --sort=-%cpu | head -20')">top procs</button>
+        <button class="term-quick" onclick="quickCmd('ip addr show')">ip addr</button>
+        <button class="term-quick" onclick="quickCmd('journalctl -n 30 --no-pager')">journal</button>
+        <button class="term-quick" onclick="quickCmd('cat /etc/os-release')">os-info</button>
+        <button class="term-quick" onclick="quickCmd('env | sort')">env</button>
+      </div>
+
+      <!-- Tastenleisten (mobil immer, am PC per „Tasten"-Schalter):
+           Modifikatoren sind klebrig — einmal tippen = einmalig scharf,
+           zweimal = dauerhaft. Sie wirken auf die Leistentasten UND auf
+           anschließend über die Bildschirmtastatur getippte Zeichen. -->
+      <div class="term-keys" id="term-keys">
+        <div class="term-key-bar">
+          <button class="term-ctrl-btn mod" id="term-mod-ctrl"  onclick="termToggleMod('ctrl')">Strg</button>
+          <button class="term-ctrl-btn mod" id="term-mod-shift" onclick="termToggleMod('shift')">Shift</button>
+          <button class="term-ctrl-btn mod" id="term-mod-alt"   onclick="termToggleMod('alt')">Alt</button>
+          <span class="term-key-sep"></span>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Escape')">Esc</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Tab')">Tab</button>
+          <button class="term-ctrl-btn nav key-arrow" onclick="termKeyBtn('ArrowLeft')">&#8592;</button>
+          <button class="term-ctrl-btn nav key-arrow" onclick="termKeyBtn('ArrowUp')">&#8593;</button>
+          <button class="term-ctrl-btn nav key-arrow" onclick="termKeyBtn('ArrowDown')">&#8595;</button>
+          <button class="term-ctrl-btn nav key-arrow" onclick="termKeyBtn('ArrowRight')">&#8594;</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Home')">Pos1</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('End')">Ende</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('PageUp')">Bild&#8593;</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('PageDown')">Bild&#8595;</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Insert')">Einfg</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Delete')">Entf</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Backspace')">&#9003;</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('Enter')">&#9166;</button>
+          <button class="term-ctrl-btn nav" onclick="termToggleFkeys()">F1&#8211;F12</button>
+        </div>
+
+        <div class="term-key-bar fkeys" id="term-fkey-row">
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F1')">F1</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F2')">F2</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F3')">F3</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F4')">F4</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F5')">F5</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F6')">F6</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F7')">F7</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F8')">F8</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F9')">F9</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F10')">F10</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F11')">F11</button>
+          <button class="term-ctrl-btn nav" onclick="termKeyBtn('F12')">F12</button>
+        </div>
+
+        <div class="term-key-bar">
+          <button class="term-ctrl-btn" onclick="termCombo('\u0003')" title="Abbrechen (SIGINT)">Strg+C</button>
+          <button class="term-ctrl-btn" onclick="termCombo('\u0004')" title="Ende der Eingabe / abmelden">Strg+D</button>
+          <button class="term-ctrl-btn" onclick="termCombo('\u001a')" title="In den Hintergrund (SIGTSTP)">Strg+Z</button>
+          <button class="term-ctrl-btn" onclick="termCombo('\u001c')" title="SIGQUIT">Strg+\</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u000c')" title="Bildschirm leeren">Strg+L</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0012')" title="Verlaufssuche">Strg+R</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0001')" title="Zeilenanfang">Strg+A</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0005')" title="Zeilenende">Strg+E</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0015')" title="Zeile links löschen">Strg+U</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u000b')" title="Zeile rechts löschen">Strg+K</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0017')" title="Wort löschen">Strg+W</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0018')" title="nano: Beenden">Strg+X</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u000f')" title="nano: Speichern">Strg+O</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0007')" title="nano: Hilfe">Strg+G</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0013')" title="Ausgabe anhalten">Strg+S</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u0011')" title="Ausgabe fortsetzen">Strg+Q</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u001bb')" title="Ein Wort zurück">Alt+&#8592;</button>
+          <button class="term-ctrl-btn nav" onclick="termCombo('\u001bf')" title="Ein Wort vor">Alt+&#8594;</button>
+          <button class="term-ctrl-btn" onclick="termCombo('\u001b[3;7~')" title="Strg+Alt+Entf">Strg+Alt+Entf</button>
+        </div>
+
+        <div class="term-key-bar sym">
+          <button class="term-ctrl-btn nav" onclick="termInsert('|')">|</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('/')">/</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('\\')">\</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('~')">~</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('-')">-</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('_')">_</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('$')">$</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('*')">*</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('&amp;')">&amp;</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('&gt;')">&gt;</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('&lt;')">&lt;</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('&quot;')">&quot;</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('\'')">'</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('`')">`</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('#')">#</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('!')">!</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('?')">?</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('=')">=</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert(':')">:</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert(';')">;</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('{}')">{}</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('[]')">[]</button>
+          <button class="term-ctrl-btn nav" onclick="termInsert('()')">()</button>
+        </div>
+      </div>
+
+      <div class="terminal-container" id="terminal-container">
+        <div class="terminal-toolbar">
+          <div class="terminal-dots">
+            <span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span>
+          </div>
+          <div class="terminal-tab" style="display:flex;align-items:center;gap:0;overflow:hidden;white-space:nowrap;">
+            <span id="term-tab-user" style="color:var(--accent);flex-shrink:0;">root</span>
+            <span style="opacity:.5;flex-shrink:0;">@</span>
+            <span id="term-tab-host" class="term-host-trunc">host</span>
+            <span style="opacity:.5;margin:0 2px;flex-shrink:0;">:</span>
+            <span id="term-tab-cwd" style="color:#60a5fa;flex-shrink:0;">~</span>
+          </div>
+          <div style="flex:1;min-width:8px;"></div>
+          <button class="term-zoom" onclick="termFontSize(-1)" title="Schrift kleiner">A&#8722;</button>
+          <button class="term-zoom" onclick="termFontSize(1)" title="Schrift größer">A+</button>
+          <span id="term-size" style="font-family:var(--font-mono);font-size:10px;color:var(--text-ghost);flex-shrink:0;padding:0 8px 0 6px;">80×24</span>
+          <span id="term-ws-status" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);flex-shrink:0;padding-right:4px;">○ …</span>
+        </div>
+        <div class="terminal-output" id="terminal-output" onclick="termFocus()"></div>
+        <div class="terminal-input-row" style="padding:7px 14px;gap:10px;min-height:unset;">
+          <span id="term-focus-hint" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Tippen · Strg+C bricht ab · Strg+Shift+C/V kopiert</span>
+          <button class="btn btn-sm" id="btn-term-kb" onclick="termFocus()" style="-webkit-tap-highlight-color:transparent;padding:5px 10px;font-size:12px;">⌨ Tastatur</button>
+        </div>
+      </div>
+      <!-- Hidden textarea captures all keyboard input for the PTY -->
+      <textarea id="term-kb" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        style="position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;font-size:16px;resize:none;border:none;outline:none;background:transparent;color:transparent;caret-color:transparent;"></textarea>
+    </div>
+
+    <!-- ══════════ UPDATES PAGE ══════════ -->
+    <div id="page-updates" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Updates</span></h1>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="checkUpdates()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Prüfen
+          </button>
+          <button class="btn btn-primary" onclick="runSystemUpdate()" id="btn-run-update">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Alle Updates installieren
+          </button>
+        </div>
+      </div>
+
+      <div class="card-grid-2">
+        <div class="card">
+          <div class="card-accent"></div>
+          <div class="card-header">
+            <div class="card-title">Verfügbare Updates</div>
+            <span class="card-badge badge-cyan" id="update-manager">—</span>
+          </div>
+          <div class="update-count" id="update-count">—</div>
+          <div class="metric-sub" style="margin-bottom:16px">Pakete können aktualisiert werden</div>
+          <div class="update-list" id="update-list">
+            <div class="loading-overlay"><span class="spinner"></span> Suche nach Updates...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-accent"></div>
+          <div class="card-header">
+            <div class="card-title">Update Log</div>
+          </div>
+          <div class="update-log visible" id="update-log" style="display:block; min-height: 200px;">Noch kein Update durchgeführt.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ VMS PAGE ══════════ -->
+    <div id="page-vms" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Virtuelle</span> Maschinen</h1>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="loadVMs()">&#8635; Aktualisieren</button>
+          <button class="btn btn-primary adm-only" onclick="openVMCreateModal()">+ Neue VM</button>
+        </div>
+      </div>
+
+      <!-- VM grid -->
+      <div class="vm-grid" id="vm-grid">
+        <div class="loading-overlay"><span class="spinner"></span> Lade VMs...</div>
+      </div>
+
+      <!-- Networks section -->
+      <div class="adm-only" style="margin-top:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2 style="font-size:16px;font-weight:600;color:var(--text-secondary);">
+            <span style="color:var(--cyan)">&#9672;</span> Virtuelle Netzwerke
+          </h2>
+          <button class="btn sa-only" onclick="openNetCreateModal()">+ Netzwerk</button>
+        </div>
+        <div id="net-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+          <div class="loading-overlay"><span class="spinner"></span></div>
+        </div>
+      </div>
+
+      <!-- Storage section -->
+      <div class="adm-only" style="margin-top:24px;margin-bottom:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2 style="font-size:16px;font-weight:600;color:var(--text-secondary);">
+            <span style="color:var(--amber)">&#9672;</span> Storage Pools
+          </h2>
+          <div style="display:flex;gap:8px;">
+            <select id="pool-select" onchange="loadVolumes(this.value)"
+              style="background:var(--bg-input);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:6px 12px;color:var(--text-primary);font-family:var(--font-mono);font-size:12px;outline:none;">
+              <option value="">Pool waehlen...</option>
+            </select>
+            <button class="btn" onclick="openVolCreateModal()">+ Volume</button>
+          </div>
+        </div>
+        <div id="pool-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:12px;"></div>
+        <div id="vol-list"></div>
+      </div>
+
+      <!-- ISO section -->
+      <div class="adm-only" style="margin-top:24px;margin-bottom:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2 style="font-size:16px;font-weight:600;color:var(--text-secondary);">
+            <span style="color:var(--cyan)">&#9672;</span> ISO-Abbilder
+          </h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="loadIsos()">&#8635;</button>
+            <button class="btn sa-only" onclick="openIsoModal()">+ ISO von URL laden</button>
+          </div>
+        </div>
+        <div id="iso-list"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ VM DETAIL PAGE ══════════ -->
+<div id="page-vm-detail" class="page">
+  <!-- Header -->
+  <div class="header-bar" style="flex-wrap:wrap;gap:10px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="btn" onclick="showPage('vms')">&#8592; Zurück</button>
+      <div>
+        <h1 class="header-title" id="vmd-title">VM</h1>
+        <div id="vmd-state-badge" style="display:inline-block;margin-top:2px;"></div>
+      </div>
+    </div>
+    <div id="vmd-actions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--border-dim);margin-bottom:20px;overflow-x:auto;">
+    <button class="vm-mgmt-tab active" onclick="switchVMDTab('overview')" id="vmdt-overview">&#220;bersicht</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('hardware')" id="vmdt-hardware">Hardware</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('disks')" id="vmdt-disks">Datentr&#228;ger</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('network')" id="vmdt-network">Netzwerk</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('devices')" id="vmdt-devices">Ger&#228;te</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('boot')" id="vmdt-boot">Boot</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('snapshots')" id="vmdt-snapshots">Snapshots</button>
+    <button class="vm-mgmt-tab sa-only" onclick="switchVMDTab('xml')" id="vmdt-xml">XML</button>
+    <button class="vm-mgmt-tab sa-only" onclick="switchVMDTab('access')" id="vmdt-access">&#128101; Zugriff</button>
+    <button class="vm-mgmt-tab" onclick="switchVMDTab('share')" id="vmdt-share">&#128279; Freigabe</button>
+  </div>
+
+  <!-- Tab panels -->
+  <div id="vmdtab-overview"></div>
+  <div id="vmdtab-hardware" style="display:none;"></div>
+  <div id="vmdtab-disks" style="display:none;"></div>
+  <div id="vmdtab-network" style="display:none;"></div>
+  <div id="vmdtab-devices" style="display:none;"></div>
+  <div id="vmdtab-boot" style="display:none;"></div>
+  <div id="vmdtab-snapshots" style="display:none;"></div>
+  <div id="vmdtab-xml" style="display:none;"></div>
+  <div id="vmdtab-access" style="display:none;"></div>
+  <div id="vmdtab-share" style="display:none;"></div>
+</div>
+
+    <!-- ══════════ DOCKER PAGE ══════════ -->
+    <div id="page-docker" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Docker</span></h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="loadDocker(true)">&#8635; Aktualisieren</button>
+          <button class="btn" id="dk-auto-btn" onclick="dkToggleAuto()">&#9210; Auto: an</button>
+        </div>
+      </div>
+
+      <div class="dk-tabs">
+        <button class="vm-mgmt-tab active" onclick="dkSwitchTab('containers')" id="dkt-containers">Container</button>
+        <button class="vm-mgmt-tab" onclick="dkSwitchTab('images')"     id="dkt-images">Images</button>
+        <button class="vm-mgmt-tab" onclick="dkSwitchTab('networks')"   id="dkt-networks">Netzwerke</button>
+        <button class="vm-mgmt-tab" onclick="dkSwitchTab('volumes')"    id="dkt-volumes">Volumes</button>
+        <button class="vm-mgmt-tab" onclick="dkSwitchTab('stacks')"     id="dkt-stacks">Stacks</button>
+        <button class="vm-mgmt-tab" onclick="dkSwitchTab('system')"     id="dkt-system">System</button>
+      </div>
+
+      <div id="dktab-containers">
+        <div class="dk-toolbar">
+          <input type="text" id="dk-c-search" class="conn-input dk-search" placeholder="Container suchen..." oninput="dkRenderContainers()">
+          <div class="dk-filter">
+            <button class="proto-btn active" id="dk-cf-all"     onclick="dkSetFilter('all')">Alle</button>
+            <button class="proto-btn"        id="dk-cf-running" onclick="dkSetFilter('running')">Laufend</button>
+            <button class="proto-btn"        id="dk-cf-stopped" onclick="dkSetFilter('stopped')">Gestoppt</button>
+          </div>
+          <span class="dk-spacer"></span>
+          <button class="btn btn-primary" onclick="dkOpenCreate()">+ Container</button>
+        </div>
+        <div id="dk-container-list"><div class="loading-overlay"><span class="spinner"></span> Lade Container...</div></div>
+      </div>
+
+      <div id="dktab-images" style="display:none;">
+        <div class="dk-toolbar">
+          <input type="text" id="dk-i-search" class="conn-input dk-search" placeholder="Image suchen..." oninput="dkRenderImages()">
+          <div class="dk-filter">
+            <button class="proto-btn active" id="dk-if-all"      onclick="dkSetImgFilter('all')">Alle</button>
+            <button class="proto-btn"        id="dk-if-unused"   onclick="dkSetImgFilter('unused')">Ungenutzt</button>
+            <button class="proto-btn"        id="dk-if-dangling" onclick="dkSetImgFilter('dangling')">Dangling</button>
+          </div>
+          <span class="dk-spacer"></span>
+          <button class="btn" onclick="dkOpenHub()">&#128269; Docker Hub</button>
+          <button class="btn" onclick="dkOpenBuild()">&#128296; Bauen</button>
+          <button class="btn btn-primary" onclick="dkOpenPull()">&#8595; Pull</button>
+        </div>
+        <div id="dk-image-list"><div class="loading-overlay"><span class="spinner"></span></div></div>
+      </div>
+
+      <div id="dktab-networks" style="display:none;">
+        <div class="dk-toolbar">
+          <span class="dk-spacer"></span>
+          <button class="btn btn-primary" onclick="dkOpenNetCreate()">+ Netzwerk</button>
+        </div>
+        <div id="dk-network-list"><div class="loading-overlay"><span class="spinner"></span></div></div>
+      </div>
+
+      <div id="dktab-volumes" style="display:none;">
+        <div class="dk-toolbar">
+          <span class="dk-spacer"></span>
+          <button class="btn btn-primary" onclick="dkOpenVolCreate()">+ Volume</button>
+        </div>
+        <div id="dk-volume-list"><div class="loading-overlay"><span class="spinner"></span></div></div>
+      </div>
+
+      <div id="dktab-stacks" style="display:none;">
+        <div id="dk-stack-list"><div class="loading-overlay"><span class="spinner"></span></div></div>
+      </div>
+
+      <div id="dktab-system" style="display:none;">
+        <div id="dk-system-info"><div class="loading-overlay"><span class="spinner"></span></div></div>
+      </div>
+
+      <div class="dk-foot">Docker-Reiter v<span id="docker-version-foot">&#8230;</span></div>
+    </div>
+
+    <!-- ══════════ DOCKER DETAIL PAGE ══════════ -->
+    <div id="page-docker-detail" class="page">
+      <div class="header-bar" style="flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+          <button class="btn" onclick="dkBackToList()">&#8592; Zur&#252;ck</button>
+          <div style="min-width:0;">
+            <h1 class="header-title dk-ellipsis" id="dkd-title">Container</h1>
+            <div id="dkd-state-badge" style="display:inline-block;margin-top:2px;"></div>
+          </div>
+        </div>
+        <div id="dkd-actions" style="display:flex;gap:8px;flex-wrap:wrap;min-width:0;"></div>
+      </div>
+
+      <div class="kpi-reihe dk-live" id="dkd-live" aria-label="Live-Messwerte" hidden>
+        <section class="kpi kpi-link" data-dk-stats tabindex="0" role="button" aria-description="Verlauf zeigen"><div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg><span>CPU</span><span class="kpi-zusatz" id="dkl-cpus"></span></div>
+          <div class="kpi-wert"><span id="dkl-cpu">–</span><small>%</small></div><div class="kpi-funke" id="dkl-f-cpu"></div><div class="kpi-unter" id="dkl-cpu-u">live · jede Sekunde</div></section>
+        <section class="kpi kpi-link" data-dk-stats tabindex="0" role="button" aria-description="Verlauf zeigen"><div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7v10M10 7v10M14 7v10M18 7v10"/></svg><span>Arbeitsspeicher</span></div>
+          <div class="kpi-wert"><span id="dkl-ram">–</span></div><div class="kpi-funke" id="dkl-f-ram"></div><div class="kpi-unter" id="dkl-ram-u">—</div></section>
+        <section class="kpi kpi-link" data-dk-stats tabindex="0" role="button" aria-description="Verlauf zeigen"><div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17V7M7 7l-3 3M7 7l3 3"/><path d="M17 7v10M17 17l-3-3M17 17l3-3"/></svg><span>Netzwerk</span></div>
+          <div class="kpi-wert zwei"><span><i aria-label="empfangen">↓</i><b id="dkl-rx">–</b></span><span><i aria-label="gesendet">↑</i><b id="dkl-tx">–</b></span></div><div class="kpi-funke" id="dkl-f-net"></div></section>
+        <section class="kpi kpi-link" data-dk-stats tabindex="0" role="button" aria-description="Verlauf zeigen"><div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg><span>Datenträger</span><span class="kpi-zusatz" id="dkl-pids"></span></div>
+          <div class="kpi-wert zwei"><span><i aria-label="lesen">R</i><b id="dkl-rd">–</b></span><span><i aria-label="schreiben">W</i><b id="dkl-wr">–</b></span></div><div class="kpi-funke" id="dkl-f-io"></div></section>
+      </div>
+
+      <div class="dk-tabs">
+        <button class="vm-mgmt-tab active" onclick="dkdSwitchTab('overview')" id="dkdt-overview">&#220;bersicht</button>
+        <button class="vm-mgmt-tab" onclick="dkdSwitchTab('logs')"    id="dkdt-logs">Logs</button>
+        <button class="vm-mgmt-tab" onclick="dkdSwitchTab('stats')"   id="dkdt-stats">Stats</button>
+        <button class="vm-mgmt-tab" onclick="dkdSwitchTab('console')" id="dkdt-console">Konsole</button>
+        <button class="vm-mgmt-tab" onclick="dkdSwitchTab('inspect')" id="dkdt-inspect">Inspect</button>
+        <button class="vm-mgmt-tab" onclick="dkdSwitchTab('procs')"   id="dkdt-procs">Prozesse</button>
+        <button class="vm-mgmt-tab" onclick="dkdSwitchTab('changes')" id="dkdt-changes">Dateien</button>
+      </div>
+
+      <div id="dkdtab-overview"></div>
+      <div id="dkdtab-logs"    style="display:none;"></div>
+      <div id="dkdtab-stats"   style="display:none;"></div>
+      <div id="dkdtab-console" style="display:none;"></div>
+      <div id="dkdtab-inspect" style="display:none;"></div>
+      <div id="dkdtab-procs"   style="display:none;"></div>
+      <div id="dkdtab-changes" style="display:none;"></div>
+    </div>
+
+    <!-- ══════════ STARTSEITE (Kacheln der eigenen Startseite, optional) ══════════ -->
+    <div id="page-startseite" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Mein</span> Dashboard</h1>
+        <div class="header-actions">
+          <input type="search" id="st-suche" class="header-search" placeholder="Kachel suchen…" aria-label="Kacheln durchsuchen">
+          <a class="btn" id="st-extern" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+            Startseite öffnen
+          </a>
+          <button class="btn" type="button" onclick="loadStartseite(true)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aktualisieren
+          </button>
+        </div>
+      </div>
+      <div id="st-inhalt" aria-live="polite">
+        <div class="loading-overlay"><span class="spinner"></span> Lade Dashboard…</div>
+      </div>
+    </div>
+
+    <!-- ══════════ AUTOMATIONEN (n8n, serverseitig über die API – dashboard/automationen.py) ══════════ -->
+    <div id="page-automationen" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Automationen</span></h1>
+        <div class="header-actions">
+          <a class="btn" id="au-extern" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+            In n8n öffnen
+          </a>
+          <button class="btn" type="button" onclick="loadAutomationen(true)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aktualisieren
+          </button>
+        </div>
+      </div>
+      <div id="au-kpis" class="au-kpis" aria-live="polite"></div>
+      <section class="au-block" aria-labelledby="au-h-wf">
+        <h2 class="au-titel" id="au-h-wf">Workflows</h2>
+        <div id="au-workflows" class="au-liste"><div class="loading-overlay"><span class="spinner"></span> Lade Automationen…</div></div>
+      </section>
+      <section class="au-block au-weg" aria-labelledby="au-h-weg">
+        <h2 class="au-titel" id="au-h-weg">Bin-weg-Modus</h2>
+        <div class="au-weg-zeile">
+          <p id="au-weg-status" class="au-weg-status" aria-live="polite">Lade…</p>
+          <label for="au-weg-tage" class="sr-only">Wie lange weg?</label>
+          <select id="au-weg-tage" class="au-weg-tage">
+            <option value="1">1 Tag</option><option value="3">3 Tage</option><option value="7" selected>1 Woche</option>
+            <option value="14">2 Wochen</option><option value="30">1 Monat</option>
+          </select>
+          <button class="btn btn-primary" type="button" id="au-weg-knopf" disabled>Einschalten</button>
+        </div>
+        <p class="au-frage-hinweis">Für Urlaub: nur noch Kritisches pusht, Ben darf kritische Fälle selbst reparieren, Jarvis ruft weiterhin an. Schaltet sich zum gewählten Datum selbst aus.</p>
+      </section>
+      <section class="au-block au-frage" aria-labelledby="au-h-f">
+        <h2 class="au-titel" id="au-h-f">Ben fragen</h2>
+        <form id="au-frage-form" class="au-frage-form">
+          <label for="au-frage" class="sr-only">Frage an Ben, den Server-Arzt</label>
+          <textarea id="au-frage" rows="2" maxlength="1500" placeholder="z. B. Warum ist Nextcloud gerade langsam?" required></textarea>
+          <button class="btn btn-primary" type="submit" id="au-frage-knopf">Fragen</button>
+        </form>
+        <p class="au-frage-hinweis">Ben, dein Server-Arzt (ein Claude-Agent), schaut sich den echten Serverzustand an (nur lesen, ändert nichts). Die Antwort kommt nach 1–3 Minuten unter Benachrichtigungen (Thema n8n) und als Bericht in Obsidian.</p>
+      </section>
+      <section class="au-block" aria-labelledby="au-h-l">
+        <h2 class="au-titel" id="au-h-l">Letzte Läufe</h2>
+        <div id="au-laeufe" class="au-laeufe"></div>
+      </section>
+      <p class="au-hinweis">Bearbeiten in n8n. Hier: Überblick und Ein/Aus – der Schlüssel bleibt am Server.</p>
+    </div>
+
+    <!-- ══════════ KONTEN (eingebettet, siehe dashboard/einbettung.py) ══════════ -->
+    <div id="page-konten" class="page eb-seite">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Konten</span></h1>
+        <div class="header-actions">
+          <div class="eb-segment" role="group" aria-label="Konto wählen">
+          </div>
+          <button class="btn" type="button" onclick="ladeEinbettung('konten', null, true)" title="Ansicht neu laden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Neu laden
+          </button>
+        </div>
+      </div>
+      <p class="eb-hinweis" id="eb-hinweis-konten" hidden></p>
+      <iframe class="eb-rahmen" id="eb-rahmen-konten" title="Konten" referrerpolicy="no-referrer" allow="clipboard-write"
+        sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
+    </div>
+
+    <!-- ══════════ CODES (eingebettet, siehe dashboard/einbettung.py) ══════════ -->
+    <div id="page-codes" class="page eb-seite">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Codes</span></h1>
+        <div class="header-actions">
+          <button class="btn" type="button" onclick="ladeEinbettung('codes', null, true)" title="Ansicht neu laden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Neu laden
+          </button>
+        </div>
+      </div>
+      <p class="eb-hinweis" id="eb-hinweis-codes" hidden></p>
+      <iframe class="eb-rahmen" id="eb-rahmen-codes" title="Codes" referrerpolicy="no-referrer" allow="clipboard-write"
+        sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
+    </div>
+
+    <!-- ══════════ ZENTRALE (eingebettet, siehe dashboard/einbettung.py) ══════════ -->
+    <div id="page-backups" class="page eb-seite">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Backups</span></h1>
+        <div class="header-actions">
+          <button class="btn" type="button" onclick="ladeEinbettung('backups', null, true)" title="Ansicht neu laden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Neu laden
+          </button>
+        </div>
+      </div>
+      <p class="eb-hinweis" id="eb-hinweis-backups" hidden></p>
+      <iframe class="eb-rahmen" id="eb-rahmen-backups" title="Zentrale" referrerpolicy="no-referrer" allow="clipboard-write"
+        sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
+    </div>
+
+    <!-- ══════════ TOOLS (eingebettet, siehe dashboard/einbettung.py) ══════════ -->
+    <div id="page-werkzeuge" class="page eb-seite">
+      <div class="header-bar">
+        <h1 class="header-title"><span>IT</span>-Tools</h1>
+        <div class="header-actions">
+          <button class="btn" type="button" onclick="ladeEinbettung('werkzeuge', null, true)" title="Ansicht neu laden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Neu laden
+          </button>
+        </div>
+      </div>
+      <p class="eb-hinweis" id="eb-hinweis-werkzeuge" hidden></p>
+      <iframe class="eb-rahmen" id="eb-rahmen-werkzeuge" title="Tools" referrerpolicy="no-referrer" allow="clipboard-write"
+        sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
+    </div>
+
+    <!-- ══════════ SERVICES PAGE ══════════ -->
+    <div id="page-services" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Dienste</span></h1>
+        <div class="header-actions">
+          <input type="text" id="service-search" class="header-search" placeholder="Dienst suchen …">
+          <button class="btn" onclick="loadServices()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aktualisieren
+          </button>
+        </div>
+      </div>
+      <div class="card" style="max-height: calc(100vh - 160px); overflow-y: auto;">
+        <div id="service-list">
+          <div class="loading-overlay"><span class="spinner"></span> Lade Services...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ CONNECTIONS PAGE ══════════ -->
+    <div id="page-connections" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Verbindungen</span></h1>
+        <button class="btn btn-primary" onclick="openConnModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Neue Verbindung
+        </button>
+      </div>
+      <div id="conn-grid" class="vm-grid">
+        <div class="loading-overlay"><span class="spinner"></span> Lade Verbindungen...</div>
+      </div>
+    </div>
+
+    <!-- ══════════ BROWSER PAGE ══════════ -->
+    <div id="page-browser" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Browser</span>-Sitzungen</h1>
+        <button class="btn btn-primary" onclick="openBrowserModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Neue Session
+        </button>
+      </div>
+      <div id="browser-idle-hint" style="font-size:11px;color:var(--text-secondary);font-family:var(--font-mono);margin:-4px 0 14px;"></div>
+      <div id="browser-grid" class="vm-grid">
+        <div class="loading-overlay"><span class="spinner"></span> Lade Sessions...</div>
+      </div>
+    </div>
+
+    <!-- ═══ Benutzerverwaltung ═══ -->
+    <div id="page-settings" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Einstellungen</span></h1>
+      </div>
+      <div class="set-grid">
+        <div class="card sa-only" id="set-db-karte">
+          <div class="card-header"><div class="card-title">Datenbank (Schnellspeicher)</div></div>
+          <p class="set-hint">Zwischenspeicher für langsame Abfragen (Meldungen, Docker-Listen). Hauptspeicher ist PostgreSQL (<code>cc_db</code>) mit laufender Kopie (<code>cc_db_replica</code>). Fällt die Haupt-Datenbank aus, liest das Command Center aus der Kopie; geht beides nicht, nimmt es SQLite – es geht nichts verloren.</p>
+          <dl class="dk-kv" id="set-db"><dt>Status</dt><dd>lädt …</dd></dl>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Sichtbare Tabs</div></div>
+          <p class="set-hint">Ausgeblendete Tabs verschwinden nur aus deiner Seitenleiste – Rechte ändern sich nicht. Gilt für deinen Benutzer auf allen Geräten. Übersicht, Einstellungen und Mein Konto bleiben immer sichtbar.</p>
+          <div id="set-tabs" class="set-tabs"></div>
+          <div class="set-actions"><button class="btn btn-primary" onclick="saveTabPrefs()">Speichern</button></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Standard-SSH-Zugangsdaten</div></div>
+          <p class="set-hint">Werden bei Verbindungen mit „Standard-Zugangsdaten verwenden“ für leere Felder genutzt. Passwort und Schlüssel werden nur auf dem Server gespeichert und nie wieder angezeigt.</p>
+          <div class="set-form">
+            <label class="conn-label">Benutzername</label>
+            <input id="set-ssh-user" type="text" class="conn-input" placeholder="z. B. root" autocomplete="off">
+            <label class="conn-label">Passwort <span id="set-ssh-pw-state" class="set-state"></span></label>
+            <input id="set-ssh-pass" type="password" class="conn-input" placeholder="leer lassen = unverändert" autocomplete="new-password">
+            <label class="conn-label">Privater Schlüssel <span id="set-ssh-key-state" class="set-state"></span></label>
+            <textarea id="set-ssh-key" class="conn-input conn-key" rows="4" spellcheck="false" placeholder="leer lassen = unverändert&#10;-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+            <label class="conn-label">Passphrase des Schlüssels (optional)</label>
+            <input id="set-ssh-keypass" type="password" class="conn-input" placeholder="nur bei verschlüsseltem Schlüssel" autocomplete="new-password">
+          </div>
+          <div id="set-ssh-err" class="set-err"></div>
+          <div class="set-actions">
+            <button class="btn btn-primary" onclick="saveSshDefaults()">Speichern</button>
+            <button class="btn" onclick="clearSshDefault('password')">Passwort löschen</button>
+            <button class="btn btn-danger" onclick="clearSshDefault('key')">Schlüssel löschen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-notifications" class="page">
+      <div class="header-bar">
+        <h1 class="header-title"><span>Benachrichtigungen</span></h1>
+        <div class="header-actions">
+          <label class="sec-auto" title="Alle 30 Sekunden neu laden"><input type="checkbox" id="ntf-auto" checked> Auto</label>
+          <a class="btn" id="ntf-open" href="#" target="_blank" rel="noopener" style="display:none;">ntfy öffnen</a>
+          <button class="btn" onclick="loadNotifications()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aktualisieren
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header ntf-head">
+          <div class="ntf-chips" id="ntf-chips"></div>
+          <div class="ntf-range" role="group" aria-label="Zeitraum">
+            <button class="ntf-range-btn" data-since="1h">1 Std</button>
+            <button class="ntf-range-btn" data-since="6h">6 Std</button>
+            <button class="ntf-range-btn active" data-since="24h">24 Std</button>
+          </div>
+        </div>
+        <div class="ntf-list" id="ntf-list"><div class="ntf-empty">Lade …</div></div>
+      </div>
+    </div>
+
+    <div id="page-users" class="page">
+      <div class="header-bar">
+        <div>
+          <h1 class="header-title"><span>Benutzer</span> &amp; Gruppen</h1>
+          <div class="header-meta" style="margin-top:8px">
+            <span class="kopf-pille" id="bg-ich">–</span>
+            <span class="kopf-pille">Rechte prüft der Server bei jeder Aktion</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="seg" role="group" aria-label="Ansicht">
+            <button type="button" data-bg-ansicht="benutzer" aria-pressed="true">Benutzer</button>
+            <button type="button" data-bg-ansicht="gruppen" aria-pressed="false">Gruppen</button>
+            <button type="button" data-bg-ansicht="matrix" aria-pressed="false">Übersicht</button>
+          </div>
+          <button class="btn btn-primary" type="button" id="bg-neu-benutzer" data-recht="benutzer.verwalten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Benutzer anlegen</button>
+          <button class="btn btn-primary" type="button" id="bg-neu-gruppe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Gruppe anlegen</button>
+        </div>
+      </div>
+      <div id="bg-inhalt"><div class="loading-overlay"><span class="spinner"></span> Lade Benutzer …</div></div>
+
+      <dialog class="bg-dialog" id="bg-dialog-benutzer" aria-labelledby="bg-db-titel">
+        <form method="dialog" class="bg-dialog-form" id="bg-form-benutzer" novalidate>
+          <header><h2 id="bg-db-titel">Benutzer</h2><button type="button" class="bg-x" data-schliessen aria-label="Schließen">✕</button></header>
+          <div class="bg-dialog-inhalt">
+            <div class="bg-neu-felder">
+              <label class="bg-feld"><span>Benutzername</span><input class="conn-input" name="username" autocomplete="off" spellcheck="false" maxlength="32" pattern="[a-z_][a-z0-9_-]*" placeholder="z. B. anna"></label>
+              <label class="bg-feld"><span>Start-Passwort</span><input class="conn-input" name="password" type="password" autocomplete="new-password" placeholder="mind. 12 Zeichen, Groß/Klein, Ziffer, Sonderzeichen"></label>
+              <label class="bg-feld" id="bg-shell-feld"><span>Server-Zugang (SSH)</span>
+                <select name="shell" class="conn-input"><option value="/usr/sbin/nologin">Nein – nur Command Center</option><option value="/bin/bash">Ja – /bin/bash</option></select></label>
+            </div>
+            <fieldset class="bg-gruppenwahl"><legend>Gruppen</legend><div id="bg-gruppen-liste"></div></fieldset>
+            <div class="bg-ergebnis" id="bg-ergebnis" aria-live="polite"></div>
+            <div class="bg-pw-bereich" id="bg-pw-bereich">
+              <h3>Passwort zurücksetzen</h3>
+              <p class="bg-leise">Nur du als Inhaber kannst das. Ist ein eigenes Command-Center-Passwort hinterlegt, wird dieses geändert, sonst das Linux-Passwort. Offene Sitzungen des Benutzers werden beendet.</p>
+              <div class="bg-pw-zeile"><input class="conn-input" type="password" id="bg-pw-neu" autocomplete="new-password" placeholder="Neues Passwort" aria-label="Neues Passwort"><button type="button" class="btn" id="bg-pw-knopf">Setzen</button></div>
+            </div>
+            <p class="bg-fehler" id="bg-db-fehler" role="alert" hidden></p>
+          </div>
+          <footer><button type="button" class="btn" data-schliessen>Abbrechen</button><button type="submit" class="btn btn-primary" id="bg-db-ok">Speichern</button></footer>
+        </form>
+      </dialog>
+
+      <dialog class="bg-dialog bg-dialog-breit" id="bg-dialog-gruppe" aria-labelledby="bg-dg-titel">
+        <form method="dialog" class="bg-dialog-form" id="bg-form-gruppe" novalidate>
+          <header><h2 id="bg-dg-titel">Gruppe</h2><button type="button" class="bg-x" data-schliessen aria-label="Schließen">✕</button></header>
+          <div class="bg-dialog-inhalt">
+            <label class="bg-feld"><span>Name</span><input class="conn-input" name="name" maxlength="40" required></label>
+            <label class="bg-feld"><span>Beschreibung</span><input class="conn-input" name="beschreibung" maxlength="200"></label>
+            <div id="bg-rechte-liste" class="bg-rechte-liste"></div>
+            <p class="bg-fehler" id="bg-dg-fehler" role="alert" hidden></p>
+          </div>
+          <footer><button type="button" class="btn btn-danger" id="bg-dg-loeschen">Gruppe löschen</button><span class="bg-luecke"></span><button type="button" class="btn" data-schliessen>Abbrechen</button><button type="submit" class="btn btn-primary">Speichern</button></footer>
+        </form>
+      </dialog>
+    </div>
+
+    <!-- ══════════ ANGRIFFE (Angriffs-Radar, seit 3.6.0) ══════════ -->
+    <div id="page-angriffe" class="page">
+      <div class="header-bar">
+        <div>
+          <h1 class="header-title"><span>Angriffe</span></h1>
+          <div class="header-meta" style="margin-top:8px">
+            <span class="kopf-pille" id="ag-stand"><span class="status-dot"></span><b>Lade …</b></span>
+            <span class="kopf-pille">Gesammelt alle 5 Min · 90 Tage</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="seg" role="group" aria-label="Zeitraum">
+            <button type="button" data-ag-bereich="24h" aria-pressed="true">24 Std</button>
+            <button type="button" data-ag-bereich="7d" aria-pressed="false">7 Tage</button>
+            <button type="button" data-ag-bereich="30d" aria-pressed="false">30 Tage</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hinweis-zeile ag-fehlt" id="ag-fehlt" hidden></div>
+
+      <div class="kpi-reihe" aria-label="Kennzahlen">
+        <section class="kpi" aria-labelledby="ag-k1">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span id="ag-k1">Versuche</span><span class="kpi-zusatz" id="ag-d-gesamt"></span></div>
+          <div class="kpi-wert"><span id="ag-gesamt">–</span></div>
+          <div class="kpi-funke" id="ag-funke"></div>
+          <div class="kpi-unter" id="ag-gesamt-unter">—</div>
+        </section>
+        <section class="kpi" aria-labelledby="ag-k2">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg><span id="ag-k2">Angreifer</span><span class="kpi-zusatz" id="ag-d-ips"></span></div>
+          <div class="kpi-wert"><span id="ag-ips">–</span></div>
+          <div class="kpi-unter">verschiedene IP-Adressen</div>
+        </section>
+        <section class="kpi" aria-labelledby="ag-k3">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span id="ag-k3">Geheimnis-Suchen</span><span class="kpi-zusatz" id="ag-d-geheim"></span></div>
+          <div class="kpi-wert"><span id="ag-geheim">–</span></div>
+          <div class="kpi-unter">.env, .git, Schlüssel, Konfigs</div>
+        </section>
+        <section class="kpi" aria-labelledby="ag-k4">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg><span id="ag-k4">Sperren</span><span class="kpi-zusatz" id="ag-d-sperren"></span></div>
+          <div class="kpi-wert"><span id="ag-sperren">–</span></div>
+          <div class="kpi-unter">von fail2ban &amp; IDS ausgesprochen</div>
+        </section>
+      </div>
+
+      <section class="card g-karte" aria-labelledby="ag-verlauf-t" style="margin-bottom:16px">
+        <div class="card-header"><h2 class="card-title" id="ag-verlauf-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Verlauf nach Art</h2></div>
+        <div id="ag-verlauf"></div>
+        <p class="ag-erklaerung"><b>Geheimnisse</b>: Suche nach .env, .git, Schlüsseln · <b>Lücken &amp; Exploits</b>: WordPress/PHP/Admin-Scans, ../, jndi … · <b>Logins</b>: falsche Passwörter (SSH, Web-Apps) · <b>Netzwerk</b>: IDS-Treffer von bekannten Angreifer-Netzen</p>
+      </section>
+
+      <div class="raster raster-2">
+        <section class="card" aria-labelledby="ag-ips-t">
+          <div class="card-header"><h2 class="card-title" id="ag-ips-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>Wer greift an?</h2><span class="card-zusatz" id="ag-ips-zahl"></span></div>
+          <div class="ag-scroll" tabindex="0" role="region" aria-label="Häufigste Angreifer">
+            <table class="process-table ag-tabelle"><thead><tr><th>IP-Adresse</th><th class="zahl">Versuche</th><th>Art</th><th>Ziel</th><th>Zuletzt</th><th><span class="sr-only">Aktion</span></th></tr></thead>
+            <tbody id="ag-ips-body"></tbody></table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="ag-ziele-t">
+          <div class="card-header"><h2 class="card-title" id="ag-ziele-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Was wird angegriffen?</h2></div>
+          <div id="ag-ziele" class="ag-balken"></div>
+        </section>
+      </div>
+
+      <div class="raster raster-2">
+        <section class="card" aria-labelledby="ag-pfade-t">
+          <div class="card-header"><h2 class="card-title" id="ag-pfade-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Wonach gesucht wird</h2></div>
+          <div id="ag-pfade" class="ag-balken"></div>
+        </section>
+        <section class="card" aria-labelledby="ag-ids-t">
+          <div class="card-header"><h2 class="card-title" id="ag-ids-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>IDS: Netzwerk-Angriffe</h2></div>
+          <div id="ag-ids" class="ag-balken"></div>
+        </section>
+      </div>
+
+      <section class="card" aria-labelledby="ag-letzte-t">
+        <div class="card-header"><h2 class="card-title" id="ag-letzte-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Neueste Versuche</h2><span class="card-zusatz">ohne IDS · aktualisiert sich alle 60 s</span></div>
+        <div class="ag-scroll ag-scroll-hoch" tabindex="0" role="region" aria-label="Neueste Versuche">
+          <table class="process-table ag-tabelle"><thead><tr><th>Zeit</th><th>IP-Adresse</th><th>Art</th><th>Ziel</th><th>Anfrage</th><th class="zahl">Antwort</th></tr></thead>
+          <tbody id="ag-letzte-body"></tbody></table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ══════════ HILFE (seit 3.13.0, static/hilfe.js) ══════════ -->
+    <div id="page-hilfe" class="page">
+      <div class="header-bar">
+        <div>
+          <h1 class="header-title"><span>Hilfe</span></h1>
+          <div class="header-meta" style="margin-top:8px"><span class="kopf-pille">Taste <kbd>?</kbd> öffnet die Hilfe zur aktuellen Seite</span></div>
+        </div>
+        <div class="header-actions"><input type="search" id="hilfe-suche" class="conn-input" placeholder="Hilfe durchsuchen …" aria-label="Hilfe durchsuchen"></div>
+      </div>
+      <nav class="hilfe-sprung" id="hilfe-sprung" aria-label="Themen"></nav>
+      <div id="hilfe-inhalt" class="hilfe-inhalt"></div>
+      <p class="ag-leer" id="hilfe-leer" hidden>Nichts gefunden – anderes Wort versuchen.</p>
+    </div>
+
+    <!-- ══════════ SECURITY PAGE ══════════ -->
+    <div id="page-security" class="page">
+      <div class="header-bar">
+        <div>
+          <h1 class="header-title"><span>Sicherheit</span> &amp; Sperren</h1>
+          <div class="header-meta" style="margin-top:8px">
+            <span class="kopf-pille" id="ids-stand"><span class="status-dot" id="ids-live-dot"></span><b id="ids-stand-text">IDS lädt …</b></span>
+            <span class="kopf-pille">Modus <b id="ids-modus">–</b></span>
+            <a class="kopf-pille kopf-link" href="#" onclick="event.preventDefault(); showPage('angriffe')">Angriffs-Radar →</a>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="seg" role="group" aria-label="Zeitraum IDS-Treffer">
+            <button type="button" data-ids-range="60" aria-pressed="true">1 Std</button>
+            <button type="button" data-ids-range="1440" aria-pressed="false">24 Std</button>
+          </div>
+          <label class="sec-auto" title="Sperren und Meldungen alle 30 Sekunden neu laden"><input type="checkbox" id="sec-auto" checked> Auto</label>
+          <button class="btn" type="button" onclick="loadSecurity()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Aktualisieren</button>
+        </div>
+      </div>
+
+      <div class="kpi-reihe" aria-label="Kennzahlen">
+        <section class="kpi" aria-labelledby="sk1">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="8 12 11 15 16 9"/></svg><span id="sk1">IDS-Wächter</span></div>
+          <div class="kpi-wert"><span id="ids-zustand">–</span></div>
+          <div class="kpi-unter" id="ids-zustand-unter">—</div>
+          <div class="kpi-unter" id="ids-pakete">—</div>
+        </section>
+        <section class="kpi kpi-link" aria-labelledby="sk2" tabindex="0" role="button" aria-description="Zur Liste der gesperrten IPs" data-sprung="sec-bans-karte">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg><span id="sk2">Gesperrte IPs</span></div>
+          <div class="kpi-wert"><span id="sec-ban-count">–</span></div>
+          <div class="kpi-unter">davon IDS <b id="ids-sperren">–</b>, Rest fail2ban</div>
+        </section>
+        <section class="kpi" aria-labelledby="sk3">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span id="sk3">Angreifer gesperrt</span><span class="kpi-zusatz">24 Std</span></div>
+          <div class="kpi-wert"><span id="ids-angriff">–</span></div>
+          <div class="kpi-funke" id="ids-funke"></div>
+          <div class="kpi-unter">vom IDS, Verbindungen von außen</div>
+        </section>
+        <section class="kpi" aria-labelledby="sk4">
+          <div class="kpi-kopf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg><span id="sk4">Verdächtig nach außen</span><span class="kpi-zusatz">24 Std</span></div>
+          <div class="kpi-wert"><span id="ids-aussen">–</span></div>
+          <div class="kpi-unter" id="ids-aussen-unter">—</div>
+        </section>
+      </div>
+
+      <div class="raster raster-2">
+        <section class="card g-karte" aria-labelledby="ids-verkehr-t">
+          <div class="card-header"><h2 class="card-title" id="ids-verkehr-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17V7M7 7l-3 3M7 7l3 3"/><path d="M17 7v10M17 17l-3-3M17 17l3-3"/></svg>Datenverkehr <span class="titel-leise" id="ids-iface">eth0</span></h2><span class="card-zusatz">live · letzte 10 Min</span></div>
+          <div id="ids-g-verkehr"></div>
+        </section>
+        <section class="card g-karte" aria-labelledby="ids-treffer-t">
+          <div class="card-header"><h2 class="card-title" id="ids-treffer-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>IDS-Treffer</h2><span class="card-zusatz" id="ids-bar-sub">je Minute · letzte Stunde</span></div>
+          <div id="ids-g-treffer"></div>
+        </section>
+      </div>
+
+      <section class="card" aria-labelledby="ids-letzte-t" style="margin-bottom:16px">
+        <div class="card-header"><h2 class="card-title" id="ids-letzte-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Letzte IDS-Sperren &amp; Warnungen</h2></div>
+        <div class="ag-scroll" tabindex="0" role="region" aria-label="Letzte Sperren und Warnungen">
+          <table class="process-table ag-tabelle"><thead><tr><th>Zeit</th><th>Art</th><th>IP-Adresse</th><th>Regel</th></tr></thead>
+          <tbody id="ids-recent-tbody"><tr><td colspan="4" class="ag-leer">Lade IDS-Daten …</td></tr></tbody></table>
+        </div>
+      </section>
+
+      <section class="card sec-neu" id="sec-bans-karte" aria-labelledby="sec-bans-t" style="margin-bottom:16px">
+        <div class="card-header"><h2 class="card-title" id="sec-bans-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Gesperrte IPs</h2><span class="card-zusatz">Spaltenkopf antippen sortiert</span></div>
+        <div class="sec-leiste">
+            <input type="text" id="sec-ban-search" class="header-search" placeholder="IP, Anwendung oder Jail suchen..." autocomplete="off">
+            <form class="sec-ban-form" onsubmit="event.preventDefault(); secBan();">
+              <input type="text" id="sec-ban-ip" class="header-search" placeholder="IP sperren…" autocomplete="off" spellcheck="false" inputmode="text">
+              <button type="submit" class="btn btn-danger">Sperren</button>
+            </form>
+            <form class="sec-ban-form" onsubmit="event.preventDefault(); secUnbanInput();">
+              <input type="text" id="sec-unban-ip" class="header-search" placeholder="IP(s) entsperren…" title="Eine oder mehrere IPs (mit Leerzeichen oder Komma getrennt). Funktioniert auch für IPs, die nur noch in der Cloudflare-Liste stehen." autocomplete="off" spellcheck="false">
+              <button type="submit" class="btn btn-success">Entsperren</button>
+            </form>
+        </div>
+        <div class="sec-chips" id="sec-jail-chips"></div>
+        <div class="sec-myip" id="sec-myip"></div>
+        <div class="sec-bulk" id="sec-bulk" hidden></div>
+        <div class="sec-scroll sec-scroll-bans" tabindex="0" role="region" aria-label="Gesperrte IPs">
+          <table class="process-table sec-table">
+            <thead><tr>
+              <th class="sec-sel"><input type="checkbox" id="sec-sel-all" title="Alle angezeigten auswählen" onclick="secSelAll(this.checked)"></th><th data-bsort="ip">IP</th><th data-bsort="jails">Anwendung / Jail</th><th data-bsort="since">Gesperrt seit</th>
+              <th data-bsort="until">Läuft ab</th><th data-bsort="bancount">Sperren</th><th>Rand</th><th></th>
+            </tr></thead>
+            <tbody id="sec-ban-tbody"><tr><td colspan="8"><div class="loading-overlay"><span class="spinner"></span> Lade Sperren...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card sec-neu" aria-labelledby="sec-ev-t">
+        <div class="card-header"><h2 class="card-title" id="sec-ev-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Meldungen</h2><span class="card-zusatz"><b id="sec-ev-count">–</b> Einträge</span></div>
+        <div class="sec-leiste">
+            <select id="sec-app" class="header-search sec-select" aria-label="Anwendung filtern">
+              <option value="">Alle Anwendungen</option>
+            </select>
+            <select id="sec-source" class="header-search sec-select" aria-label="Quelle filtern">
+              <option value="">Alle Quellen</option>
+              <option value="fail2ban">fail2ban</option>
+              <option value="cloudflare">Cloudflare-Rand</option>
+              <option value="login">Login-Wächter</option>
+              <option value="dashboard">Dashboard</option>
+            </select>
+            <input type="text" id="sec-ev-search" class="header-search" placeholder="Suchen (IP, Benutzer, Dienst …)" autocomplete="off">
+        </div>
+        <div class="sec-chips" id="sec-kind-chips"></div>
+        <div class="sec-scroll sec-scroll-ev" tabindex="0" role="region" aria-label="Meldungen">
+          <table class="process-table sec-table">
+            <thead><tr>
+              <th data-esort="ts">Zeit</th><th data-esort="source">Quelle</th><th data-esort="kind">Typ</th>
+              <th data-esort="app">Anwendung</th><th data-esort="ip">IP</th><th data-esort="user">Benutzer</th><th data-esort="text">Meldung</th>
+            </tr></thead>
+            <tbody id="sec-ev-tbody"><tr><td colspan="7"><div class="loading-overlay"><span class="spinner"></span> Lade Meldungen...</div></td></tr></tbody>
+          </table>
+          <div class="sec-more" id="sec-ev-more"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ══════ VM Create Modal ══════ -->
+<div id="vm-create-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;overflow-y:auto;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:480px;margin:16px auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Neue Virtuelle Maschine</h2>
+      <button onclick="closeVMCreateModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div>
+        <label class="conn-label">VM Name</label>
+        <input id="vc-name" type="text" class="conn-input" placeholder="meine-vm">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="conn-label">vCPUs</label>
+          <input id="vc-vcpus" type="number" min="1" max="64" value="2" class="conn-input">
+        </div>
+        <div>
+          <label class="conn-label">RAM (GiB)</label>
+          <input id="vc-ram" type="number" min="1" max="512" value="2" class="conn-input">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="conn-label">Storage Pool</label>
+          <select id="vc-pool" class="conn-input" style="appearance:auto;"></select>
+        </div>
+        <div>
+          <label class="conn-label">Disk (GiB)</label>
+          <input id="vc-disk" type="number" min="1" max="2000" value="20" class="conn-input">
+        </div>
+      </div>
+      <div>
+        <label class="conn-label">ISO Datei (optional)</label>
+        <select id="vc-iso" class="conn-input" style="appearance:auto;" onchange="vcIsoChange()">
+          <option value="">Kein ISO</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="conn-label">Betriebssystem</label>
+          <select id="vc-ostype" class="conn-input" style="appearance:auto;" onchange="vcOsChange()">
+            <option value="linux">Linux (virtio &#8212; schnell)</option>
+            <option value="windows">Windows (SATA + e1000e &#8212; kompatibel)</option>
+          </select>
+        </div>
+        <div id="vc-virtio-wrap" style="display:none;">
+          <label class="conn-label">virtio-Treiber-ISO</label>
+          <select id="vc-virtio" class="conn-input" style="appearance:auto;">
+            <option value="">Keine</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="conn-label">Netzwerk</label>
+          <select id="vc-net" class="conn-input" style="appearance:auto;"></select>
+        </div>
+        <div>
+          <label class="conn-label">Machine Type</label>
+          <select id="vc-machine" class="conn-input" style="appearance:auto;">
+            <option value="q35">q35</option>
+            <option value="pc">pc</option>
+          </select>
+        </div>
+      </div>
+      <div id="vc-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px 12px;background:var(--red-glow);border-radius:6px;border:1px solid rgba(239,68,68,.25);"></div>
+      <button class="btn btn-primary" id="vc-btn" style="width:100%;padding:12px;font-size:14px;" onclick="createVM()">VM Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Kill-Signal ══════ -->
+<div id="dk-kill-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:400px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Signal senden</h2>
+      <button onclick="dkCloseKill()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-kill-id">
+      <div class="dk-empty" style="padding:0;">Container: <span id="dk-kill-name" style="color:var(--text-primary)"></span></div>
+      <div>
+        <label class="conn-label">Signal</label>
+        <select id="dk-kill-sig" class="conn-input">
+          <option value="SIGKILL">SIGKILL &#8212; sofort beenden</option>
+          <option value="SIGTERM">SIGTERM &#8212; freundlich beenden</option>
+          <option value="SIGINT">SIGINT &#8212; Strg+C</option>
+          <option value="SIGHUP">SIGHUP</option>
+          <option value="SIGQUIT">SIGQUIT</option>
+          <option value="SIGUSR1">SIGUSR1</option>
+          <option value="SIGUSR2">SIGUSR2</option>
+          <option value="SIGSTOP">SIGSTOP</option>
+          <option value="SIGCONT">SIGCONT</option>
+        </select>
+      </div>
+      <button class="btn btn-danger" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoKill()">Signal senden</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Umbenennen ══════ -->
+<div id="dk-rename-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:400px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Container umbenennen</h2>
+      <button onclick="dkCloseRename()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-rn-id">
+      <div>
+        <label class="conn-label">Neuer Name</label>
+        <input id="dk-rn-name" type="text" class="conn-input" placeholder="mein-container">
+      </div>
+      <div id="dk-rn-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoRename()">Umbenennen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Neustart-Regel &amp; Limits ══════ -->
+<div id="dk-limits-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:460px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Neustart-Regel &amp; Limits</h2>
+      <button onclick="dkCloseLimits()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-lim-id">
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div>
+          <label class="conn-label">Neustart-Regel</label>
+          <select id="dk-lim-policy" class="conn-input">
+            <option value="no">no &#8212; nie</option>
+            <option value="always">always</option>
+            <option value="unless-stopped">unless-stopped</option>
+            <option value="on-failure">on-failure</option>
+          </select>
+        </div>
+        <div>
+          <label class="conn-label">Max. Versuche (on-failure)</label>
+          <input id="dk-lim-retry" type="number" min="0" max="1000" class="conn-input" placeholder="0">
+        </div>
+        <div>
+          <label class="conn-label">Speicher (MB, 0 = frei)</label>
+          <input id="dk-lim-mem" type="number" min="0" class="conn-input" placeholder="unbegrenzt">
+        </div>
+        <div>
+          <label class="conn-label">CPUs (z.&nbsp;B. 0.5)</label>
+          <input id="dk-lim-cpus" type="number" min="0" step="0.1" class="conn-input" placeholder="unbegrenzt">
+        </div>
+        <div>
+          <label class="conn-label">CPU-Shares</label>
+          <input id="dk-lim-shares" type="number" min="0" class="conn-input" placeholder="1024">
+        </div>
+        <div>
+          <label class="conn-label">CPU-Set</label>
+          <input id="dk-lim-cpuset" type="text" class="conn-input" placeholder="0-3">
+        </div>
+      </div>
+      <div class="dk-empty" style="padding:0;">Leere Felder bleiben unver&#228;ndert.</div>
+      <div id="dk-lim-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoLimits()">&#220;bernehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Image herunterladen (Pull) ══════ -->
+<div id="dk-pull-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:520px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Image herunterladen</h2>
+      <button onclick="dkClosePull()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div>
+        <label class="conn-label">Image (z.&nbsp;B. nginx, alpine:3.20, ghcr.io/user/app:v1)</label>
+        <input id="dk-pull-repo" type="text" class="conn-input" placeholder="nginx:latest">
+      </div>
+      <div id="dk-pull-progress" style="display:none;"></div>
+      <div id="dk-pull-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="dk-pull-btn" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoPull()">Herunterladen</button>
+      <div class="dk-empty" style="padding:0;">L&#228;uft im Hintergrund weiter &#8212; der Reiter darf gewechselt werden.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Docker-Hub-Suche ══════ -->
+<div id="dk-hub-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:760px;margin:16px;max-height:90svh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Docker Hub durchsuchen</h2>
+      <button onclick="dkCloseHub()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div class="dk-toolbar">
+      <input id="dk-hub-q" type="text" class="conn-input dk-search" placeholder="z.&nbsp;B. nginx, postgres, redis" onkeydown="if(event.key==='Enter')dkHubSearch()">
+      <button class="btn btn-primary" onclick="dkHubSearch()">Suchen</button>
+    </div>
+    <div id="dk-hub-results"><div class="dk-empty">Suchbegriff eingeben.</div></div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Image bauen ══════ -->
+<div id="dk-build-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:620px;margin:16px;max-height:90svh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Image aus Dockerfile bauen</h2>
+      <button onclick="dkCloseBuild()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div>
+        <label class="conn-label">Build-Kontext (Verzeichnis auf dem Host)</label>
+        <input id="dk-build-ctx" type="text" class="conn-input" placeholder="/opt/meinprojekt">
+      </div>
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div>
+          <label class="conn-label">Dockerfile</label>
+          <input id="dk-build-df" type="text" class="conn-input" value="Dockerfile">
+        </div>
+        <div>
+          <label class="conn-label">Ziel-Tag (name:version)</label>
+          <input id="dk-build-tag" type="text" class="conn-input" placeholder="meinapp:1.0">
+        </div>
+      </div>
+      <div>
+        <label class="conn-label">Build-Argumente (KEY=WERT, eins pro Zeile)</label>
+        <textarea id="dk-build-args" class="dk-pre" style="height:70px;white-space:pre;" spellcheck="false"></textarea>
+      </div>
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="dk-build-nocache"> Cache nicht verwenden
+      </label>
+      <div id="dk-build-log" style="display:none;"></div>
+      <div id="dk-build-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="dk-build-btn" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoBuild()">Bauen</button>
+      <div class="dk-empty" style="padding:0;">Systemzweige wie /etc, /root oder /proc sind als Kontext gesperrt.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Netzwerk anlegen ══════ -->
+<div id="dk-net-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:520px;margin:16px;max-height:90svh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Netzwerk anlegen</h2>
+      <button onclick="dkCloseNet()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Name</label><input id="dk-net-name" type="text" class="conn-input" placeholder="mein-netz"></div>
+        <div><label class="conn-label">Treiber</label>
+          <select id="dk-net-driver" class="conn-input" onchange="dkNetDriverChanged()">
+            <option value="bridge">bridge</option>
+            <option value="macvlan">macvlan</option>
+            <option value="ipvlan">ipvlan</option>
+            <option value="overlay">overlay</option>
+          </select>
+        </div>
+        <div><label class="conn-label">Subnetz</label><input id="dk-net-subnet" type="text" class="conn-input" placeholder="172.30.0.0/24"></div>
+        <div><label class="conn-label">Gateway</label><input id="dk-net-gw" type="text" class="conn-input" placeholder="172.30.0.1"></div>
+        <div><label class="conn-label">IP-Bereich</label><input id="dk-net-range" type="text" class="conn-input" placeholder="172.30.0.128/25"></div>
+        <div id="dk-net-parent-wrap" style="display:none;"><label class="conn-label">Eltern-Schnittstelle</label><input id="dk-net-parent" type="text" class="conn-input" placeholder="eth0"></div>
+      </div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;">
+        <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dk-net-internal"> intern (kein Internet)</label>
+        <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dk-net-ipv6"> IPv6</label>
+      </div>
+      <div id="dk-net-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="dk-net-btn" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoNetCreate()">Anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Volume anlegen ══════ -->
+<div id="dk-vol-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:420px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Volume anlegen</h2>
+      <button onclick="dkCloseVol()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div><label class="conn-label">Name</label><input id="dk-vol-name" type="text" class="conn-input" placeholder="mein-volume"></div>
+      <div><label class="conn-label">Treiber</label><input id="dk-vol-driver" type="text" class="conn-input" value="local"></div>
+      <div id="dk-vol-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoVolCreate()">Anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Aufräumen (Prune) ══════ -->
+<div id="dk-prune-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid rgba(239,68,68,.4);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:680px;margin:16px;max-height:90svh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;color:var(--red);">Aufr&#228;umen</h2>
+      <button onclick="dkClosePrune()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div class="dk-warn">Diese Aktion ist <b>nicht umkehrbar</b>. Auf diesem Host laufen produktive Dienste &#8212; bitte den Trockenlauf unten genau pr&#252;fen.</div>
+    <div style="display:grid;gap:8px;margin-bottom:14px;">
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="dk-pr-containers" onchange="dkPruneDryrun()"> Gestoppte Container</label>
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="dk-pr-images" checked onchange="dkPruneDryrun()"> Ungenutzte Images</label>
+      <label class="dk-empty" style="padding:0 0 0 24px;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="dk-pr-images-all" onchange="dkPruneDryrun()"> <span style="color:var(--amber)">auch getaggte ungenutzte Images (nicht nur namenlose)</span></label>
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="dk-pr-volumes" onchange="dkPruneDryrun()"> <span style="color:var(--red)">Ungenutzte Volumes (Datenverlust m&#246;glich!)</span></label>
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="dk-pr-networks" onchange="dkPruneDryrun()"> Ungenutzte Netzwerke</label>
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="dk-pr-cache" onchange="dkPruneDryrun()"> Build-Cache</label>
+    </div>
+    <div id="dk-prune-preview"><div class="dk-empty">Trockenlauf l&#228;uft&#8230;</div></div>
+    <button class="btn btn-danger" id="dk-prune-btn" style="width:100%;padding:12px;font-size:14px;margin-top:14px;" onclick="dkDoPrune()">Endg&#252;ltig l&#246;schen</button>
+  </div>
+</div>
+
+<!-- ══════ Docker: Container mit Netzwerk verbinden ══════ -->
+<div id="dk-connect-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:460px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Container verbinden</h2>
+      <button onclick="dkCloseConnect()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-cn-net">
+      <div class="dk-empty" style="padding:0;">Netzwerk: <span id="dk-cn-netname" style="color:var(--text-primary)"></span></div>
+      <div><label class="conn-label">Container</label><select id="dk-cn-container" class="conn-input"></select></div>
+      <div id="dk-cn-hinweis" class="dk-empty" style="display:none;padding:0;"></div>
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Feste IPv4 (optional)</label><input id="dk-cn-ip" type="text" class="conn-input" placeholder="automatisch"></div>
+        <div><label class="conn-label">Alias (optional)</label><input id="dk-cn-alias" type="text" class="conn-input" placeholder="db"></div>
+      </div>
+      <div id="dk-cn-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoConnect()">Verbinden</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Container als Image festschreiben ══════ -->
+<div id="dk-commit-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:460px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Als Image festschreiben</h2>
+      <button onclick="dkCloseCommit()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-cm-id">
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Repository</label><input id="dk-cm-repo" type="text" class="conn-input" placeholder="mein-image"></div>
+        <div><label class="conn-label">Tag</label><input id="dk-cm-tag" type="text" class="conn-input" value="latest"></div>
+      </div>
+      <div><label class="conn-label">Nachricht (optional)</label><input id="dk-cm-msg" type="text" class="conn-input" placeholder="Stand vom ..."></div>
+      <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dk-cm-pause" checked> Container w&#228;hrenddessen pausieren</label>
+      <div id="dk-cm-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoCommit()">Festschreiben</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Datei in den Container legen ══════ -->
+<div id="dk-upload-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:460px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Datei hochladen</h2>
+      <button onclick="dkCloseUpload()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-up-id">
+      <div><label class="conn-label">Zielverzeichnis im Container</label><input id="dk-up-path" type="text" class="conn-input" value="/tmp"></div>
+      <div><label class="conn-label">Datei (max. 7&nbsp;MB)</label><input id="dk-up-file" type="file" class="conn-input" style="padding:6px;"></div>
+      <div id="dk-up-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoUpload()">Hochladen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Container-Assistent ══════ -->
+<div id="dk-create-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:720px;margin:16px;max-height:90svh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Container erstellen</h2>
+      <button onclick="dkCloseCreate()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Image (Pflicht)</label><input id="dk-cr-image" type="text" class="conn-input" placeholder="nginx:alpine"></div>
+        <div><label class="conn-label">Name</label><input id="dk-cr-name" type="text" class="conn-input" placeholder="mein-container"></div>
+      </div>
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Kommando (optional)</label><input id="dk-cr-cmd" type="text" class="conn-input" placeholder="sh -c 'sleep 3600'"></div>
+        <div><label class="conn-label">Entrypoint (optional)</label><input id="dk-cr-entry" type="text" class="conn-input" placeholder=""></div>
+        <div><label class="conn-label">Benutzer</label><input id="dk-cr-user" type="text" class="conn-input" placeholder="root"></div>
+        <div><label class="conn-label">Arbeitsverzeichnis</label><input id="dk-cr-workdir" type="text" class="conn-input" placeholder="/app"></div>
+      </div>
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Ports (host:container[/proto], eine pro Zeile)</label>
+          <textarea id="dk-cr-ports" class="dk-pre" style="height:70px;white-space:pre;" spellcheck="false" placeholder="8080:80&#10;5432:5432/tcp"></textarea></div>
+        <div><label class="conn-label">Volumes (quelle:ziel[:ro], eine pro Zeile)</label>
+          <textarea id="dk-cr-vols" class="dk-pre" style="height:70px;white-space:pre;" spellcheck="false" placeholder="mein-vol:/data&#10;/srv/x:/x:ro"></textarea></div>
+        <div><label class="conn-label">Umgebungsvariablen (KEY=WERT, eine pro Zeile)</label>
+          <textarea id="dk-cr-env" class="dk-pre" style="height:70px;white-space:pre;" spellcheck="false"></textarea></div>
+        <div><label class="conn-label">Labels (key=wert, eine pro Zeile)</label>
+          <textarea id="dk-cr-labels" class="dk-pre" style="height:70px;white-space:pre;" spellcheck="false"></textarea></div>
+      </div>
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Netzwerk</label><select id="dk-cr-net" class="conn-input"><option value="">Vorgabe (bridge)</option></select></div>
+        <div><label class="conn-label">Neustart-Regel</label>
+          <select id="dk-cr-restart" class="conn-input">
+            <option value="no">no</option><option value="unless-stopped" selected>unless-stopped</option>
+            <option value="always">always</option><option value="on-failure">on-failure</option>
+          </select></div>
+        <div><label class="conn-label">Speicher (MB)</label><input id="dk-cr-mem" type="number" min="0" class="conn-input" placeholder="unbegrenzt"></div>
+        <div><label class="conn-label">CPUs</label><input id="dk-cr-cpus" type="number" min="0" step="0.1" class="conn-input" placeholder="unbegrenzt"></div>
+      </div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;">
+        <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dk-cr-privileged"> <span style="color:var(--red)">Privileged</span></label>
+        <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dk-cr-tty"> TTY</label>
+        <label class="dk-empty" style="padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dk-cr-start" checked> Nach dem Erstellen starten</label>
+      </div>
+      <div><label class="conn-label">Zus&#228;tzliche Capabilities (kommagetrennt, optional)</label><input id="dk-cr-caps" type="text" class="conn-input" placeholder="NET_ADMIN,SYS_PTRACE"></div>
+      <div id="dk-cr-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="dk-cr-btn" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoCreate()">Erstellen</button>
+      <div class="dk-empty" style="padding:0;">Fehlt das Image lokal, wird es vorher automatisch heruntergeladen.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Docker: Netzwerk vom Container aus verbinden ══════ -->
+<div id="dk-ctrconnect-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:460px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h2 style="font-size:18px;font-weight:600;">Netzwerk verbinden</h2>
+      <button onclick="dkCloseCtrConnect()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <input type="hidden" id="dk-ctrcn-id">
+      <div class="dk-empty" style="padding:0;">Container: <span id="dk-ctrcn-name" style="color:var(--text-primary)"></span></div>
+      <div><label class="conn-label">Netzwerk</label><select id="dk-ctrcn-net" class="conn-input"></select></div>
+      <div class="vmd-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;">
+        <div><label class="conn-label">Feste IPv4 (optional)</label><input id="dk-ctrcn-ip" type="text" class="conn-input" placeholder="automatisch"></div>
+        <div><label class="conn-label">Alias (optional)</label><input id="dk-ctrcn-alias" type="text" class="conn-input" placeholder="db"></div>
+      </div>
+      <div class="dk-empty" style="padding:0;">Eine feste IP muss im Subnetz des gew&#228;hlten Netzwerks liegen.</div>
+      <div id="dk-ctrcn-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="dkDoCtrConnect()">Verbinden</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Toast Container ══════ -->
+<div id="toast-container"></div>
+
+<!-- VM Settings Modal removed — functionality replaced by page-vm-detail -->
+
+<!-- ══════ Bestätigungs-Dialog (ersetzt natives confirm) ══════ -->
+<div id="ui-confirm-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.78);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:26px 28px;width:100%;max-width:420px;margin:16px;">
+    <div id="ui-confirm-msg" style="font-size:14px;color:var(--text-primary);white-space:pre-wrap;line-height:1.55;margin-bottom:22px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="ui-confirm-cancel" class="btn">Abbrechen</button>
+      <button id="ui-confirm-ok" class="btn btn-primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Benutzer erstellen/bearbeiten Modal ══════ -->
+<!-- Benutzer-Dialoge: #bg-dialog-benutzer / #bg-dialog-gruppe (static/benutzer.js) -->
+
+<!-- ══════ ISO Download Modal ══════ -->
+<div id="iso-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:460px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:18px;font-weight:600;">ISO von URL laden</h2>
+      <button onclick="closeIsoModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:12px;">
+      <div>
+        <label class="conn-label">ISO-URL (http/https)</label>
+        <input id="iso-url" type="text" class="conn-input" placeholder="https://.../distro.iso">
+      </div>
+      <div>
+        <label class="conn-label">Dateiname (optional)</label>
+        <input id="iso-fn" type="text" class="conn-input" placeholder="automatisch aus URL">
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+        &#9432; Wird serverseitig nach <code id="iso-dest">/var/lib/libvirt/images</code> geladen (auch mehrere GB, im Hintergrund).
+      </div>
+      <div id="iso-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="iso-btn" onclick="startIsoDownload()" style="width:100%;padding:11px;">Download starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Network Create Modal ══════ -->
+<div id="net-create-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:400px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Netzwerk erstellen</h2>
+      <button onclick="closeNetCreateModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div>
+        <label class="conn-label">Netzwerk Name</label>
+        <input id="nc-name" type="text" class="conn-input" placeholder="mein-netz">
+      </div>
+      <div>
+        <label class="conn-label">IP CIDR</label>
+        <input id="nc-cidr" type="text" class="conn-input" placeholder="192.168.100.0/24">
+      </div>
+      <div>
+        <label class="conn-label">Forward Mode</label>
+        <select id="nc-mode" class="conn-input" style="appearance:auto;">
+          <option value="nat">NAT</option>
+          <option value="route">Route</option>
+          <option value="isolated">Isolated</option>
+        </select>
+      </div>
+      <div id="nc-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="nc-btn" style="width:100%;padding:12px;font-size:14px;" onclick="createNetwork()">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Volume Create Modal ══════ -->
+<div id="vol-create-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:380px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Volume erstellen</h2>
+      <button onclick="closeVolCreateModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <div style="display:grid;gap:14px;">
+      <div>
+        <label class="conn-label">Volume Name</label>
+        <input id="volc-name" type="text" class="conn-input" placeholder="extra.qcow2">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="conn-label">Groesse (GiB)</label>
+          <input id="volc-size" type="number" min="1" value="10" class="conn-input">
+        </div>
+        <div>
+          <label class="conn-label">Format</label>
+          <select id="volc-fmt" class="conn-input" style="appearance:auto;">
+            <option value="qcow2">qcow2</option>
+            <option value="raw">raw</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="conn-label">Pool</label>
+        <input id="volc-pool" type="text" class="conn-input" readonly style="opacity:.7;">
+      </div>
+      <div id="volc-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px;background:var(--red-glow);border-radius:6px;"></div>
+      <button class="btn btn-primary" id="volc-btn" style="width:100%;padding:12px;font-size:14px;" onclick="createVolume()">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Browser-Start Modal ══════ -->
+<div id="browser-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:400px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Neue Browser-Session</h2>
+      <button onclick="closeBrowserModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div style="display:grid;gap:16px;">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-family:var(--font-mono);">Browser</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="browser-img-btns">
+          <button class="proto-btn active" data-img="firefox" onclick="selectBrowserImg('firefox')">🦊 Firefox</button>
+          <button class="proto-btn" data-img="chromium" onclick="selectBrowserImg('chromium')">🔵 Chromium</button>
+        </div>
+      </div>
+      <div>
+        <label class="conn-label">Bezeichnung (optional)</label>
+        <input id="browser-label" type="text" class="conn-input" placeholder="Mein Browser">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-family:var(--font-mono);">Optionen</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:8px;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--border-glow)'" onmouseout="this.style.borderColor='var(--border-dim)'">
+          <input type="checkbox" id="browser-audio" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+          <span style="font-size:13px;color:var(--text-primary);">🔊 Ton übertragen</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:auto;font-family:var(--font-mono);">+CPU</span>
+        </label>
+      </div>
+      <div id="browser-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px 12px;background:var(--red-glow);border-radius:6px;border:1px solid rgba(239,68,68,.25);"></div>
+      <button class="btn btn-primary" id="browser-start-btn" style="width:100%;padding:12px;font-size:14px;" onclick="startBrowser()">Session starten</button>
+      <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);text-align:center;">
+        Beim ersten Start wird das Image automatisch heruntergeladen (~500 MB).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Browser-Session Beenden Bestätigung ══════ -->
+<div id="stop-browser-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:28px 24px;width:100%;max-width:340px;margin:16px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;margin-bottom:12px;">🗑️</div>
+      <h2 style="font-size:17px;font-weight:600;margin-bottom:8px;">Session beenden?</h2>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.5;">Der Container wird gestoppt und gelöscht.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button onclick="document.getElementById('stop-browser-modal').style.display='none'" style="padding:13px;border-radius:var(--radius-md);border:1px solid var(--border-mid);background:var(--bg-elevated);color:var(--text-secondary);font-size:14px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">Abbrechen</button>
+      <button id="stop-browser-confirm-btn" onclick="_doStopBrowser()" style="padding:13px;border-radius:var(--radius-md);border:none;background:var(--red);color:#fff;font-size:14px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;">Ja, beenden</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ New-Connection Modal ══════ -->
+<div id="conn-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:420px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:600;">Neue Verbindung</h2>
+      <button onclick="closeConnModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+
+    <div style="display:grid;gap:16px;">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-family:var(--font-mono);">Protokoll</label>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;" id="proto-btns">
+          <button class="proto-btn active" data-proto="ssh" onclick="selectProto('ssh')">SSH</button>
+          <button class="proto-btn" data-proto="vnc" onclick="selectProto('vnc')">VNC</button>
+          <button class="proto-btn" data-proto="spice" onclick="selectProto('spice')">SPICE</button>
+          <button class="proto-btn" data-proto="rdp" onclick="selectProto('rdp')">RDP</button>
+          <button class="proto-btn" data-proto="scp" onclick="selectProto('scp')">SCP</button>
+        </div>
+      </div>
+      <div>
+        <label class="conn-label">Bezeichnung (optional)</label>
+        <input id="conn-label" type="text" class="conn-input" placeholder="Mein Server">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;">
+        <div>
+          <label class="conn-label">Host / IP</label>
+          <input id="conn-host" type="text" class="conn-input" placeholder="192.168.1.100">
+        </div>
+        <div>
+          <label class="conn-label">Port</label>
+          <input id="conn-port" type="number" class="conn-input" style="width:90px;" value="22">
+        </div>
+      </div>
+      <div id="conn-auth" style="display:grid;gap:12px;">
+        <div>
+          <label class="conn-label">Benutzername</label>
+          <input id="conn-user" type="text" class="conn-input" placeholder="root">
+        </div>
+        <div>
+          <label class="conn-label">Passwort</label>
+          <input id="conn-pass" type="password" class="conn-input" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div>
+          <label class="conn-label">Privater Schlüssel (optional)</label>
+          <textarea id="conn-key" class="conn-input conn-key" rows="3" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+        </div>
+        <div>
+          <label class="conn-label">Passphrase des Schlüssels (optional)</label>
+          <input id="conn-keypass" type="password" class="conn-input" placeholder="nur bei verschlüsseltem Schlüssel" autocomplete="new-password">
+        </div>
+        <label class="conn-check"><input type="checkbox" id="conn-usedef"> Standard-Zugangsdaten verwenden <span>(aus Einstellungen, für leere Felder)</span></label>
+      </div>
+      <div id="conn-err" style="display:none;color:var(--red);font-size:12px;font-family:var(--font-mono);padding:8px 12px;background:var(--red-glow);border-radius:6px;border:1px solid rgba(239,68,68,.25);"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;" onclick="saveConn()">Verbindung speichern</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<!-- Sichtbarkeits-Dialog (Superadmin): Benutzer wählen, die eine Browser-Session sehen dürfen -->
+<div id="access-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:440px;margin:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="font-size:18px;font-weight:600;" id="access-modal-title">Sichtbar f&#252;r</h2>
+      <button onclick="closeAccessModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;">&#x2715;</button>
+    </div>
+    <p id="access-modal-hint" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;"></p>
+    <div id="access-modal-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;max-height:50vh;overflow:auto;margin-bottom:18px;"></div>
+    <div id="access-modal-err" style="display:none;color:var(--red,#ef4444);font-size:12px;margin-bottom:10px;"></div>
+    <button class="btn btn-primary" id="access-modal-btn" onclick="saveAccessModal()" style="width:100%;justify-content:center;">Speichern</button>
+  </div>
+</div>
+
+<script src="/icons/himmel.js" defer></script>
+<script src="/graph.js?v=3.6.0"></script>
+<script src="/bewegung.js?v=3.10.0"></script>
+<script src="/app.js?v=3.13.0"></script>
+<script src="/icons/passwort.js?v=1"></script>
+<script src="/konto.js?v=3.1.0"></script>
+<script src="/navigation.js?v=3.1.0"></script>
+<script src="/angriffe.js?v=3.10.0"></script>
+<script src="/benutzer.js?v=3.10.0"></script>
+<script src="/docker-live.js?v=3.9.0"></script>
+<script src="/terminal-tabs.js?v=3.10.0"></script>
+<script src="/hilfe.js?v=3.13.0"></script>
+
+</body>
+</html>
