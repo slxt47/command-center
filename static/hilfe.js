@@ -4,7 +4,7 @@
   'use strict';
   const K = (t) => `<kbd>${t}</kbd>`;
   // [id, Titel, Seiten, die hierher führen, HTML]
-  const ABSCHNITTE = [
+  const DEUTSCH = [
     ['start', 'Erste Schritte', ['dashboard'], `
       <p>Das <b>Command Center</b> verwaltet deinen Linux-Server im Browser: Auslastung, Docker, virtuelle Maschinen, Terminal,
       Benutzer und Sicherheit – an einem Ort, hell und dunkel, am Handy wie am PC.</p>
@@ -13,6 +13,7 @@
         <li><b>Navigation:</b> Seitenleiste links (am Handy unten), ${K('⌘/Strg')} + ${K('K')} öffnet „Springen zu …“ für Seiten, Container und Dienste.</li>
         <li><b>Was du siehst, hängt von deinen Rechten ab.</b> Superadmins sehen alles, alle anderen nur die Seiten ihrer Gruppen.</li>
         <li><b>Hilfe zur aktuellen Seite:</b> Taste ${K('?')}.</li>
+        <li><b>Sprache:</b> Einstellungen → Sprache (auch auf der Anmeldeseite). Dein Konto merkt sie sich auf allen Geräten.</li>
       </ul>`],
     ['uebersicht', 'Übersicht', ['dashboard'], `
       <p>Kennzahlen (CPU, Arbeitsspeicher, Netzwerk, Datenträger) mit Mini-Verlauf und darunter Graphen der letzten 15 Minuten bis 24 Stunden.</p>
@@ -66,7 +67,8 @@
       <p>Konten, Codes, Backups, IT-Tools, Mein Dashboard und Automationen gibt es nur, wenn der Server sie in
       <code>funktionen.json</code> einträgt. Eingebettete Apps laufen in einer Sandbox ohne Zugriff auf das Command Center.</p>`],
     ['einstellungen', 'Einstellungen & Mein Konto', ['settings', 'konto'], `
-      <ul><li><b>Sichtbare Tabs:</b> Seiten aus der eigenen Seitenleiste ausblenden (Rechte ändern sich nicht).</li>
+      <ul><li><b>Sprache</b> und Erscheinungsbild (hell/dunkel).</li>
+      <li><b>Sichtbare Tabs:</b> Seiten aus der eigenen Seitenleiste ausblenden (Rechte ändern sich nicht).</li>
       <li><b>Standard-SSH-Zugang</b> für Verbindungen. <b>Datenbank:</b> Zustand des Schnellspeichers (PostgreSQL mit Kopie, Rückfall SQLite).</li>
       <li><b>Mein Konto:</b> Profilbild, Passwort ändern, E-Mail für „Passwort vergessen?“, auf allen anderen Geräten abmelden.</li></ul>`],
     ['tasten', 'Alle Tastenkürzel', [], `
@@ -82,6 +84,8 @@
       <li><b>Datenbank „SQLite“ statt PostgreSQL:</b> der Datenbank-Container ist nicht erreichbar; alles läuft weiter, Status unter Einstellungen.</li>
       <li><b>Update:</b> auf dem Server <code>sudo command-center update</code> (oder <code>git pull && sudo ./install.sh --update</code>).</li></ul>`],
   ];
+  // Andere Sprache: die Sprachdatei (/icons/sprache-<code>.js) bringt die Hilfe mit
+  const ABSCHNITTE = Array.isArray(window.CC_HILFE) ? window.CC_HILFE : DEUTSCH;
 
   const $ = (id) => document.getElementById(id);
   let gebaut = false;
@@ -89,6 +93,8 @@
   function bauen() {
     if (gebaut) return;
     gebaut = true;
+    $('hilfe-inhalt').setAttribute('translate', 'no');
+    $('hilfe-sprung').setAttribute('translate', 'no');
     $('hilfe-inhalt').innerHTML = ABSCHNITTE.map(([id, titel, , html]) =>
       `<section class="card hilfe-abschnitt" id="hilfe-${id}" data-titel="${titel.toLowerCase()}"><h2>${titel}</h2>${html}</section>`).join('');
     $('hilfe-sprung').innerHTML = ABSCHNITTE.map(([id, titel]) => `<a href="#hilfe/${id}" data-id="${id}">${titel}</a>`).join('');

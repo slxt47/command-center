@@ -21,6 +21,7 @@ PREFS_FILE = DATA_DIR / "user_prefs.json"
 HIDEABLE_PAGES = ("startseite", "processes", "services", "updates", "terminal", "docker", "vms",
                   "connections", "browser", "security", "angriffe", "notifications", "users",
                   "konten", "codes", "backups", "automationen", "werkzeuge")
+SPRACHEN = ("de", "en")   # wie SPRACHEN in static/icons/i18n.js
 _MAX_KEY_LEN = 16384
 _lock = threading.Lock()
 
@@ -50,6 +51,7 @@ def get_prefs(user):
     return {
         "hidden_pages": [x for x in p.get("hidden_pages", []) if x in HIDEABLE_PAGES],
         "hideable_pages": list(HIDEABLE_PAGES),
+        "sprache": p.get("sprache", "") if p.get("sprache") in SPRACHEN else "",
         "ssh_default": {
             "username": d.get("username", ""),
             "has_password": bool(d.get("password")),
@@ -78,6 +80,10 @@ def set_prefs(user, data, validate_key=None):
             if not isinstance(hp, list):
                 return {"success": False, "error": "hidden_pages muss eine Liste sein"}
             p["hidden_pages"] = sorted({str(x) for x in hp if str(x) in HIDEABLE_PAGES})
+        if "sprache" in data:
+            if data.get("sprache") not in SPRACHEN:
+                return {"success": False, "error": "Unbekannte Sprache"}
+            p["sprache"] = data["sprache"]
         if "ssh_default" in data:
             s = data.get("ssh_default") or {}
             d = p.setdefault("ssh_default", {})

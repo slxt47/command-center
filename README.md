@@ -8,8 +8,9 @@
 
 [Produktseite](https://commandcenter.slxt.dev) · [Installation](#installation) · [Dokumentation](docs/) · [Änderungen](CHANGELOG.md)
 
-<sub>🇬🇧 A self-hosted, German-language web control panel for Linux servers: live metrics, Docker, KVM/libvirt VMs,
-persistent multi-tab terminal, fine-grained groups & permissions, fail2ban/IDS attack radar. One-line install below.</sub>
+<sub>🇬🇧 A self-hosted web control panel for Linux servers – **in English or German**: live metrics, Docker, KVM/libvirt VMs,
+persistent multi-tab terminal, fine-grained groups & permissions, fail2ban/IDS attack radar.
+Install: `curl -fsSL https://raw.githubusercontent.com/slxt47/command-center/main/get.sh | sudo bash -s -- --sprache en`</sub>
 
 </div>
 
@@ -25,7 +26,7 @@ persistent multi-tab terminal, fine-grained groups & permissions, fail2ban/IDS a
 | **Terminal** | Mehrere Tabs, die weiterlaufen, bis du sie schließt – auch über Neustarts. Anheften, verschieben, seitliche Tabs |
 | **Benutzer & Rechte** | 24 Rechte, Gruppen-Vorlagen, Übersicht „Wer darf was?“. Nicht-Superadmins bekommen eine Shell ohne `sudo`/`su` |
 | **Sicherheit** | fail2ban + Suricata-IDS, gesperrte IPs, Meldungen, **Angriffs-Radar** mit automatischer Sperre von Scannern |
-| **Bedienung** | Hell/Dunkel, Handy bis Desktop, ⌘K-Suche, Tastenkürzel, eingebaute Hilfe (`?`), Bewegung reduzierbar |
+| **Bedienung** | Deutsch & Englisch, Hell/Dunkel, Handy bis Desktop, ⌘K-Suche, Tastenkürzel, eingebaute Hilfe (`?`), Bewegung reduzierbar |
 
 ## Installation
 
@@ -36,14 +37,15 @@ curl -fsSL https://raw.githubusercontent.com/slxt47/command-center/main/get.sh |
 ```
 
 Danach im Browser `http://<server>:8420` öffnen und mit einem **Linux-Benutzer des Servers** anmelden.
-Der Installer richtet Docker ein (falls nötig), lädt das fertige Image und – auf Debian/Ubuntu – das Schutz-Paket
-(fail2ban + IDS). Er fragt nichts; alle Einstellungen lassen sich später ändern.
+Der Installer fragt zuerst nach der Sprache (Deutsch/English), richtet Docker ein (falls nötig), lädt das fertige Image
+und – auf Debian/Ubuntu – das Schutz-Paket (fail2ban + IDS). Sonst fragt er nichts; alles lässt sich später ändern.
 
 | Variante | Befehl |
 |---|---|
 | aus dem ganzen lokalen Netz erreichbar (LAN, Tailscale, VPN) | `… \| sudo bash -s -- --lan` |
 | nur vom Server selbst (hinter Reverse-Proxy oder Tunnel) | `… \| sudo bash -s -- --nur-lokal` |
 | anderer Port | `… \| sudo bash -s -- --port 9000` |
+| Sprache gleich festlegen (ohne Rückfrage) | `… \| sudo bash -s -- --sprache en` |
 | ohne fail2ban/IDS | `… \| sudo bash -s -- --ohne-schutz` |
 | weitere Superadmins | `… \| sudo bash -s -- --superadmins root,anna` |
 
@@ -53,6 +55,7 @@ Nach der Installation:
 sudo command-center status          # Version, Container, Adresse
 sudo command-center update          # neueste Version (Einstellungen bleiben)
 sudo command-center logs -f         # Protokoll
+sudo command-center sprache en      # Sprache für neue Besucher (de|en)
 sudo command-center deinstallieren  # entfernen (Daten bleiben, außer mit --alles)
 ```
 

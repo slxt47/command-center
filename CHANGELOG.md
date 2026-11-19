@@ -1,5 +1,11 @@
 # Änderungen
 
+## 3.14.0 – 2026-11-19 · Deutsch & Englisch
+
+- **Englische Oberfläche:** alle Seiten, Meldungen, Dialoge, Fehlermeldungen des Servers, Anmeldeseite, Hilfe sowie Datums- und Zahlenformate. Sprachwahl unter Einstellungen → Sprache und auf der Anmeldeseite; das Konto merkt sie sich auf allen Geräten.
+- **Installer:** fragt zuerst nach der Sprache (auch bei `curl … | sudo bash`), Option `--sprache de|en`, Ausgaben zweisprachig; `sudo command-center sprache de|en` ändert die Voreinstellung (`CC_SPRACHE`).
+- Weitere Sprachen: je eine Wörterbuch-Datei (`intern/i18n/`, siehe docs/konfiguration.md).
+
 ## 3.13.0 – 2026-11-19 · erste öffentliche Version
 
 **Neu für alle Installationen**

@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#f4f1fb">
 <meta name="color-scheme" content="light">
 <script src="/icons/modus.js?v=6"></script>
+<script src="/icons/i18n.js?v=3.14.0"></script>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -17,7 +18,7 @@
 <meta name="apple-mobile-web-app-title" content="Command Center">
 <title>Linux Command Center</title>
 <link rel="stylesheet" href="/app.css?v=3.1.0">
-<link rel="stylesheet" href="/ui.css?v=3.13.0">
+<link rel="stylesheet" href="/ui.css?v=3.14.0">
 </head>
 <body>
 
@@ -1008,6 +1009,11 @@
         <h1 class="header-title"><span>Einstellungen</span></h1>
       </div>
       <div class="set-grid">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Sprache</div></div>
+          <p class="set-hint">Sprache der Oberfläche. Dein Konto merkt sie sich auf allen Geräten.</p>
+          <div id="set-sprache" class="set-sprache" role="group" aria-label="Sprache · Language" translate="no"></div>
+        </div>
         <div class="card sa-only" id="set-db-karte">
           <div class="card-header"><div class="card-title">Datenbank (Schnellspeicher)</div></div>
           <p class="set-hint">Zwischenspeicher für langsame Abfragen (Meldungen, Docker-Listen). Hauptspeicher ist PostgreSQL (<code>cc_db</code>) mit laufender Kopie (<code>cc_db_replica</code>). Fällt die Haupt-Datenbank aus, liest das Command Center aus der Kopie; geht beides nicht, nimmt es SQLite – es geht nichts verloren.</p>
@@ -2026,7 +2032,7 @@
 </div>
 
 <script src="/icons/himmel.js" defer></script>
-<script src="/graph.js?v=3.6.0"></script>
+<script src="/graph.js?v=3.14.0"></script>
 <script src="/bewegung.js?v=3.10.0"></script>
 <script src="/app.js?v=3.13.0"></script>
 <script src="/icons/passwort.js?v=1"></script>
@@ -2036,7 +2042,7 @@
 <script src="/benutzer.js?v=3.10.0"></script>
 <script src="/docker-live.js?v=3.9.0"></script>
 <script src="/terminal-tabs.js?v=3.10.0"></script>
-<script src="/hilfe.js?v=3.13.0"></script>
+<script src="/hilfe.js?v=3.14.0"></script>
 
 </body>
 </html>

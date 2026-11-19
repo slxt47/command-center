@@ -621,6 +621,7 @@ _LOGIN_HTML = """\
 <meta name="theme-color" content="#f4f1fb">
 <meta name="color-scheme" content="light">
 <script src="/icons/modus.js?v=6"></script>
+<script src="/icons/i18n.js?v=3.14.0"></script>
 <style>
 /* Design wie das Dashboard (static/app.css): Systemschrift, hell/dunkel, Himmel, Karte mit großem Radius */
 :root{
@@ -713,6 +714,10 @@ body{
 .pw-staerke[data-stufe="4"] .pw-balken::after{width:100%;background:#30d158}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+.sprache{display:flex;justify-content:center;gap:4px;margin-top:14px}
+.sprache button{font:inherit;font-size:13px;color:var(--text-2);background:none;border:0;border-radius:8px;padding:6px 10px;min-height:32px;cursor:pointer}
+.sprache button[aria-pressed="true"]{color:var(--text);background:var(--feld);font-weight:600}
+.sprache button:focus-visible{outline:2px solid var(--akzent);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -741,6 +746,7 @@ body{
   </form>
   <button class="link" type="button" id="vergessen-knopf">Passwort vergessen?</button>
   <div class="note">Anmeldung mit den Linux-Benutzern dieses Servers</div>
+  <nav class="sprache" id="sprache" aria-label="Sprache · Language" translate="no"></nav>
   <section id="vergessen" class="ansicht" hidden aria-labelledby="vg-titel">
     <div class="titel2" id="vg-titel" tabindex="-1">Passwort zurücksetzen</div>
     <div id="vg-meldung" role="status" aria-live="polite"></div>
@@ -776,6 +782,7 @@ body{
 <script src="/icons/ziel.js"></script>
 <script src="/icons/passwort.js?v=1"></script>
 <script src="/icons/vergessen.js?v=2"></script>
+<script src="/icons/sprache-wahl.js?v=3.14.0"></script>
 </body>
 </html>
 """

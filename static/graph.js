@@ -19,6 +19,7 @@
  */
 (function () {
   'use strict';
+  const T = (x) => (window.CC_I18N ? window.CC_I18N.t(x) : x);
   const NS = 'http://www.w3.org/2000/svg';
   const RAND_R = 10, RAND_T = 10, RAND_B = 24;
   const ruhig = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -288,10 +289,11 @@
         sp.append(ii, document.createTextNode(`${r.name} Ø `), html('b', '', o.format(s / n)), document.createTextNode(' · max '),
           html('b', '', o.format(m)), html('span', 'g-stat-t', ` um ${zt(st, mt, o.schritt < 60)}`));
         st.stat.appendChild(sp);
-        zus.push(`${r.name}: Durchschnitt ${o.format(s / n)}, höchstens ${o.format(m)}`);
+        zus.push(T(`${r.name}: Durchschnitt ${o.format(s / n)}, höchstens ${o.format(m)}`));
       }
-      f.setAttribute('aria-label', `${o.titel || 'Verlauf'}, ${grp.zoom ? 'gezoomt' : (o.bereichText || '')}. ${zus.join('; ') || 'keine Daten'}. ` +
-        'Pfeiltasten: Werte, Plus/Minus: zoomen, 0: zurück.');
+      // 3.14.0: zusammengesetzte Beschreibung → Teile einzeln übersetzen (CC_I18N)
+      f.setAttribute('aria-label', `${T(o.titel || 'Verlauf')}, ${grp.zoom ? T('gezoomt') : T(o.bereichText || '')}. ${zus.join('; ') || T('keine Daten')}. ` +
+        T('Pfeiltasten: Werte, Plus/Minus: zoomen, 0: zurück.'));
       st.obenZeichnen();
       if (st.tabelle) tabelle(st);
     };

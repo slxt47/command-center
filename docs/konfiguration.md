@@ -6,6 +6,7 @@ Wirksam nach `sudo command-center neustart`.
 | Schlüssel | Standard | Bedeutung |
 |---|---|---|
 | `DASH_PORT` | `8420` | Port |
+| `CC_SPRACHE` | `de` | Sprache für Besucher ohne eigene Wahl (`de`, `en`). Jeder Benutzer wählt seine Sprache unter Einstellungen bzw. auf der Anmeldeseite; das Konto merkt sie sich |
 | `DASHBOARD_ALLOWED_NETS` | private Netze | wer direkt zugreifen darf (CIDR, Komma; `*` = alle). localhost geht immer |
 | `DASHBOARD_TRUSTED_PROXIES` | `127.0.0.0/8,::1/128` | von wem `X-Forwarded-For`/`CF-Connecting-IP` geglaubt wird |
 | `DASHBOARD_PUBLIC_URL` | – | Adresse für Links (z. B. Sperrseite) |
@@ -31,3 +32,13 @@ docker exec -i linux-dashboard python3 -m dashboard.ccpasswort setzen anna    # 
 ```
 
 Optionale Seiten (eingebettete Apps, eigene Startseite, n8n): [funktionen.md](funktionen.md).
+
+## Sprachen
+
+Die Oberfläche gibt es auf **Deutsch** und **Englisch** (Anmeldeseite, alle Seiten, Meldungen, Hilfe, Datums- und
+Zahlenformate). Reihenfolge: eigene Wahl (Einstellungen → Sprache oder Anmeldeseite, im Konto gespeichert) →
+`CC_SPRACHE` → Deutsch.
+
+Eine weitere Sprache ist eine Datei: Wörterbuch `intern/i18n/<code>.json` (Paare Deutsch → Sprache) und
+`intern/i18n/<code>-hilfe.js`, dann `python3 intern/i18n/bauen.py` und die Sprache in `static/icons/i18n.js`
+(`SPRACHEN`) und `dashboard/prefs.py` eintragen. Fehlende Texte zeigt `python3 intern/i18n/pruefen.py <code>`.

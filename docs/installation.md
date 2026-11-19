@@ -27,6 +27,7 @@ Anmelden: `http://<server>:8420` mit einem Linux-Benutzer. Superadmin ist standa
 | `--nur-lokal` | nur 127.0.0.1 – für Reverse-Proxy oder Tunnel auf demselben Server |
 | `--erlaubte-netze "…"` | eigene Liste (CIDR, Komma); `*` = alle (nur hinter Firewall!) |
 | `--port 9000` | anderer Port |
+| `--sprache en` | Sprache der Oberfläche und des Installers (`de` oder `en`); ohne Angabe fragt der Installer (auch bei `curl … \| sudo bash`) |
 | `--superadmins root,anna` | volle Rechte für diese Konten |
 | `--ersetzen` | ein schon laufendes Command Center aus einem anderen Ordner ersetzen (sonst bricht der Installer ab) |
 | `--ohne-schutz` / `--nur-schutz` | ohne fail2ban/IDS bzw. nur das Schutz-Paket |
@@ -53,6 +54,7 @@ Bei Cloudflare Tunnel zusätzlich **Cloudflare Access** davor setzen. `DASHBOARD
 
 ```bash
 sudo command-center update            # neueste Version, Einstellungen und Daten bleiben
+sudo command-center sprache en        # Voreinstellung der Sprache ändern (de|en)
 sudo command-center deinstallieren    # Container + Programm weg, Daten in /var/lib/linux-dashboard bleiben
 sudo command-center deinstallieren --alles
 ```

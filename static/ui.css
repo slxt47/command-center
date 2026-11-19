@@ -601,6 +601,11 @@ textarea { padding: 10px 12px; font-size: var(--t-klein); border-radius: var(--r
 .set-switch input:checked + .set-slider { background: var(--green); border-color: var(--green); }
 .set-switch input:checked + .set-slider::before { transform: translateX(18px); background: #fff; }
 .set-slider::before { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
+.set-sprache { display: flex; flex-wrap: wrap; gap: 8px; }
+.set-sprache-knopf { font: 600 var(--t-klein) var(--font-sans); min-height: 44px; padding: 0 18px; border-radius: 12px;
+  border: 1px solid var(--border-mid); background: var(--bg-input); color: var(--text-primary); cursor: pointer; }
+.set-sprache-knopf[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.set-sprache-knopf:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Sicherheit */
 .sec-myip { font-size: var(--t-klein); color: var(--text-secondary); }
 .sec-auto, .ntf-head label { font-size: var(--t-mini); color: var(--text-secondary); }

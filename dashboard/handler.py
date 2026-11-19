@@ -54,6 +54,22 @@ from dashboard.vms import _v as _virsh
 from dashboard.vmshare import SHARE_COOKIE, _share_mgr, share_guest_inject, share_page, _esc as _share_esc
 from dashboard.vms import get_vm_display, get_vm_full, get_vms, list_host_devices, set_kasmvnc_pref, set_vm_vnc_keymap, vm_action, vm_add_device, vm_clone, vm_create, vm_delete, vm_device_list, vm_disk_attach, vm_disk_detach, vm_get_xml, vm_nic_attach, vm_nic_detach, vm_remove_device, vm_set_graphics, vm_set_xml, vm_snapshot_create, vm_snapshot_delete, vm_snapshot_list, vm_snapshot_revert, vm_stats, vm_update
 
+
+# Mehrsprachigkeit (3.14.0): Voreinstellung des Servers für Besucher ohne eigene Wahl (Cookie cc_sprache)
+_CC_SPRACHE = os.environ.get("CC_SPRACHE", "de").strip().lower()
+if _CC_SPRACHE not in ("de", "en"):
+    _CC_SPRACHE = "de"
+
+
+def _mit_sprache(html):
+    """Voreinstellung der Sprache in <html> setzen; i18n.js mit Änderungszeit, damit neue Wörterbücher sofort ankommen."""
+    try:
+        ver = int((STATIC_DIR / "icons" / "i18n.js").stat().st_mtime)
+    except OSError:
+        ver = 0
+    html = html.replace("/icons/i18n.js?v=3.14.0", f"/icons/i18n.js?v={ver}")
+    return html.replace('<html lang="de">', f'<html lang="de" data-cc-sprache="{_CC_SPRACHE}">', 1)
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
@@ -340,7 +356,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
     def _serve_login(self, error=""):
         error_html = f'<div class="error">{error}</div>' if error else ""
-        body = _LOGIN_HTML.replace("%ERROR%", error_html).encode("utf-8")
+        body = _mit_sprache(_LOGIN_HTML.replace("%ERROR%", error_html)).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -1723,7 +1739,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     except OSError:
                         ver = 0
                     html = html.replace(f'"/{asset}"', f'"/{asset}?v={ver}"')
-                body = html.encode("utf-8")
+                body = _mit_sprache(html).encode("utf-8")
             except OSError:
                 self.send_json({"error": "index.html nicht gefunden"}, 404)
                 return

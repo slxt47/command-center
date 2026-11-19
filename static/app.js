@@ -3269,7 +3269,7 @@ async function vmdRevertSnap(snapName) {
 
 async function vmdCloneVM() {
   const name = _vmDetailName; if (!name) return;
-  const dst = prompt(`Neuer Name f&#252;r den Klon von "${name}":`, name + '-clone');
+  const dst = prompt(`Neuer Name für den Klon von "${name}":`, name + '-clone');
   if (!dst?.trim()) return;
   toast('Klone VM... (kann Minuten dauern)','info',120000);
   const r = await api('/api/vm/clone', { method:'POST', body: JSON.stringify({ name, new_name: dst.trim() }) });
@@ -7088,7 +7088,26 @@ window._prefs = null;
 
 async function loadPrefs() {
   const p = await api('/api/prefs');
-  if (p && !p.error) { window._prefs = p; applyTabPrefs(); }
+  if (p && !p.error) { window._prefs = p; applyTabPrefs(); spracheAbgleichen(p); }
+}
+
+// 3.14.0: Sprache gehört zum Konto. Eben (z. B. auf der Anmeldeseite) gewählt → ins Konto übernehmen;
+// sonst gilt die im Konto gemerkte Sprache auf jedem Gerät.
+function spracheAbgleichen(p) {
+  const I = window.CC_I18N; if (!I) return;
+  if (/(?:^|;\s*)cc_sprache_neu=1/.test(document.cookie)) {
+    document.cookie = 'cc_sprache_neu=; path=/; max-age=0; SameSite=Lax';
+    if (p.sprache !== I.code) api('/api/prefs', { method: 'POST', body: JSON.stringify({ sprache: I.code }) });
+  } else if (p.sprache && p.sprache !== I.code) {
+    I.setzen(p.sprache);
+  }
+}
+
+function spracheKarte() {
+  const el = document.getElementById('set-sprache'), I = window.CC_I18N; if (!el || !I) return;
+  el.innerHTML = Object.entries(I.sprachen).map(([c, n]) =>
+    `<button type="button" class="set-sprache-knopf" lang="${c}" aria-pressed="${c === I.code}" data-code="${c}">${escHtml(n)}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('button[data-code]'); if (b && b.dataset.code !== I.code) I.setzen(b.dataset.code); };
 }
 
 function applyTabPrefs() {
@@ -7123,6 +7142,7 @@ async function dbStatusLaden() {
 
 function renderSettings() {
   dbStatusLaden();
+  spracheKarte();
   const p = window._prefs;
   if (!p) { loadPrefs().then(() => window._prefs && renderSettings()); return; }
   const hidden = new Set(p.hidden_pages || []);

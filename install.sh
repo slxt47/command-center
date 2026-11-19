@@ -29,6 +29,7 @@
 #   --erlaubte-netze "192.168.0.0/16,100.64.0.0/10"   wer direkt zugreifen darf ("*" = alle)
 #   --superadmins "root,david"                        volle Rechte im Dashboard
 #   --port 8420
+#   --sprache de|en                                   Sprache der Oberfläche und des Installers (language)
 #
 # Einstellungen danach: /etc/linux-dashboard/dashboard.env (Dashboard) und
 # /etc/linux-dashboard/schutz.conf (Schutz). Updates ändern dort keine Werte.
@@ -44,7 +45,7 @@ VERFILE=$ETC/version
 DATA_DIR=/var/lib/linux-dashboard
 
 MODE=install; START=1; SCHUTZ=1; DASH=1; JA=0
-OPT_NETZE=""; OPT_SUPER=""; OPT_PORT=""
+OPT_NETZE=""; OPT_SUPER=""; OPT_PORT=""; SPRACHE="${CC_SPRACHE:-}"; SPRACHE_GESETZT=""
 SCHUTZ_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -57,6 +58,7 @@ while [ $# -gt 0 ]; do
     --erlaubte-netze) OPT_NETZE=$2; shift ;;
     --superadmins)    OPT_SUPER=$2; shift ;;
     --port)           OPT_PORT=$2; shift ;;
+    --sprache|--language) SPRACHE=$2; SPRACHE_GESETZT=1; shift ;;
     --ersetzen)       ERSETZEN=1 ;;
     --lan)            OPT_NETZE="192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,100.64.0.0/10,fd00::/8" ;;
     --nur-lokal)      OPT_NETZE="127.0.0.1/32" ;;
@@ -65,10 +67,20 @@ while [ $# -gt 0 ]; do
     --ohne-ids|--cloudflare|--uebernehmen|--force)
                       SCHUTZ_ARGS+=("$1") ;;
     -h|--help)        sed -n '2,35p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "Unbekannte Option: $1 (siehe --help)" >&2; exit 1 ;;
+    *) echo "Unbekannte Option / unknown option: $1 (--help)" >&2; exit 1 ;;
   esac
   shift
 done
+
+# Sprache (de/en): --sprache, sonst aus dashboard.env, sonst fragen (interaktiv) bzw. Deutsch
+[ -n "$SPRACHE" ] && SPRACHE_GESETZT=1
+[ -z "$SPRACHE" ] && SPRACHE=$(sed -n 's/^CC_SPRACHE=//p' "$ENVF" 2>/dev/null | head -1 || true)
+if [ -z "$SPRACHE" ] && [ $JA -eq 0 ] && [ -t 0 ] && [ "$MODE" = install ]; then
+  printf 'Sprache / Language:  1) Deutsch  2) English  [1]: '; read -r _s </dev/tty || true
+  case "$_s" in 2|en|EN|e) SPRACHE=en ;; *) SPRACHE=de ;; esac
+fi
+case "$SPRACHE" in en) ;; *) SPRACHE=de ;; esac
+t() { if [ "$SPRACHE" = en ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }   # t "deutsch" "english"
 
 log()  { printf '\033[1;32m[+]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
@@ -86,13 +98,14 @@ env_setze() {   # env_setze KEY wert  (dashboard.env: KEY=wert ohne Anführungsz
 
 if [ "$MODE" = status ]; then
   echo "Repository:        $VERSION"
-  echo "Dashboard:         $(cat "$VERFILE" 2>/dev/null || echo 'nicht installiert / vor 2.0')"
-  echo "Schutz-Paket:      $(cat "$ETC/schutz-version" 2>/dev/null || echo 'nicht installiert')"
+  echo "Dashboard:         $(cat "$VERFILE" 2>/dev/null || t 'nicht installiert / vor 2.0' 'not installed / before 2.0')"
+  echo "$(t 'Schutz-Paket:     ' 'Protection:       ') $(cat "$ETC/schutz-version" 2>/dev/null || t 'nicht installiert' 'not installed')"
+  echo "$(t 'Sprache:          ' 'Language:         ') $SPRACHE"
   command -v docker >/dev/null && docker ps --filter name=^linux-dashboard$ --format 'Container:         {{.Status}}'
   exit 0
 fi
 
-[ "$(id -u)" -eq 0 ] || { err "Bitte als root ausführen (sudo ./install.sh)."; exit 1; }
+[ "$(id -u)" -eq 0 ] || { err "$(t 'Bitte als root ausführen (sudo ./install.sh).' 'Please run as root (sudo ./install.sh).')"; exit 1; }
 
 # ─── Versionen ──────────────────────────────────────────────────────────────
 # Läuft schon ein Command Center aus einem ANDEREN Ordner (z. B. eigene Entwicklungs-Installation)? Dann nicht
@@ -100,8 +113,8 @@ fi
 if [ $DASH -eq 1 ] && [ "$MODE" != status ] && command -v docker >/dev/null 2>&1 && docker inspect linux-dashboard >/dev/null 2>&1; then
   ANDERER=$(docker inspect linux-dashboard --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null || true)
   if [ -n "$ANDERER" ] && [ "$ANDERER" != "$REPO" ] && [ "${ERSETZEN:-0}" != 1 ]; then
-    err "Auf diesem Server läuft bereits ein Command Center aus $ANDERER."
-    err "Es wird NICHT ersetzt. Update dort ausführen – oder bewusst ersetzen mit:  … | sudo bash -s -- --ersetzen"
+    err "$(t "Auf diesem Server läuft bereits ein Command Center aus $ANDERER." "A Command Center from $ANDERER is already running on this server.")"
+    err "$(t 'Es wird NICHT ersetzt. Update dort ausführen – oder bewusst ersetzen mit:' 'It is NOT replaced. Update it there – or replace it deliberately with:')  … | sudo bash -s -- --ersetzen"
     exit 1
   fi
 fi
@@ -113,11 +126,11 @@ if [ -z "$INSTALLIERT" ] && { [ -d "$DATA_DIR" ] || docker inspect linux-dashboa
 fi
 if [ $DASH -eq 1 ]; then
   if [ -n "$INSTALLIERT" ] && ver_lt "$VERSION" "$INSTALLIERT" && [[ " ${SCHUTZ_ARGS[*]} " != *" --force "* ]]; then
-    err "Installiert ist Dashboard $INSTALLIERT, dieses Repository ist älter ($VERSION). Erst 'git pull'."
+    err "$(t "Installiert ist Dashboard $INSTALLIERT, dieses Repository ist älter ($VERSION). Erst 'git pull'." "Installed is $INSTALLIERT, this repository is older ($VERSION). Run 'git pull' first.")"
     exit 1
   elif [ -n "$INSTALLIERT" ]; then log "Dashboard: Update $INSTALLIERT -> $VERSION"
-  elif [ $ALT_DASH -eq 1 ]; then log "Dashboard: Update einer Version vor 2.0 -> $VERSION"
-  else log "Dashboard: Erstinstallation $VERSION"; fi
+  elif [ $ALT_DASH -eq 1 ]; then log "$(t 'Dashboard: Update einer Version vor 2.0' 'Dashboard: update of a version before 2.0') -> $VERSION"
+  else log "$(t 'Dashboard: Erstinstallation' 'Dashboard: first installation') $VERSION"; fi
 fi
 
 # ─── Paketmanager / Docker ──────────────────────────────────────────────────
@@ -133,10 +146,10 @@ PM="$(detect_pm)"
 
 install_docker() {
   if command -v docker >/dev/null 2>&1; then
-    log "Docker vorhanden: $(docker --version)"
+    log "$(t 'Docker vorhanden' 'Docker present'): $(docker --version)"
     return
   fi
-  log "Docker nicht gefunden — installiere Docker Engine..."
+  log "$(t 'Docker nicht gefunden — installiere Docker Engine...' 'Docker not found — installing Docker Engine...')"
   case "$PM" in
     apt)
       export DEBIAN_FRONTEND=noninteractive
@@ -156,7 +169,7 @@ https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" \
       apt-get update -y
       apt-get install -y docker-ce docker-ce-cli containerd.io \
               docker-buildx-plugin docker-compose-plugin \
-        || { warn "Docker-CE-Repo fehlgeschlagen — nutze Distro-Pakete (docker.io)."; \
+        || { warn "$(t 'Docker-CE-Repo fehlgeschlagen — nutze Distro-Pakete (docker.io).' 'Docker CE repo failed — using distro packages (docker.io).')"; \
              apt-get install -y docker.io docker-compose-v2 || apt-get install -y docker.io; }
       ;;
     dnf|yum)
@@ -168,16 +181,16 @@ https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" \
       ;;
     pacman) pacman -Sy --noconfirm docker docker-compose ;;
     zypper) zypper --non-interactive install docker docker-compose ;;
-    *) err "Unbekannter Paketmanager. Docker bitte manuell installieren: https://docs.docker.com/engine/install/"; exit 1 ;;
+    *) err "$(t 'Unbekannter Paketmanager. Docker bitte manuell installieren:' 'Unknown package manager. Please install Docker manually:') https://docs.docker.com/engine/install/"; exit 1 ;;
   esac
   systemctl enable --now docker 2>/dev/null || service docker start 2>/dev/null || true
-  log "Docker installiert: $(docker --version)"
+  log "$(t 'Docker installiert' 'Docker installed'): $(docker --version)"
 }
 
 compose() {
   if docker compose version >/dev/null 2>&1; then docker compose "$@"
   elif command -v docker-compose >/dev/null 2>&1; then docker-compose "$@"
-  else err "Weder 'docker compose' noch 'docker-compose' verfügbar."; exit 1; fi
+  else err "$(t "Weder 'docker compose' noch 'docker-compose' verfügbar." "Neither 'docker compose' nor 'docker-compose' available.")"; exit 1; fi
 }
 
 # ─── Dashboard-Einstellungen (dashboard.env) ────────────────────────────────
@@ -185,13 +198,14 @@ dashboard_env() {
   mkdir -p "$ETC"; chmod 755 "$ETC"
   if [ -f "$ENVF" ]; then
     python3 schutz/lib/schutz.py conf-merge config/dashboard.env.example "$ENVF"
+    [ -n "$SPRACHE_GESETZT" ] && env_setze CC_SPRACHE "$SPRACHE"
     return
   fi
   install -m 600 config/dashboard.env.example "$ENVF"
   if [ $ALT_DASH -eq 1 ]; then
     # Vor 2.0 standen die Einstellungen in docker-compose.yml bzw. im Code.
     # Werte aus dem laufenden Container übernehmen und das alte Verhalten beibehalten.
-    log "Übernehme Einstellungen der bisherigen Installation:"
+    log "$(t 'Übernehme Einstellungen der bisherigen Installation:' 'Taking over settings of the previous installation:')"
     local envs; envs=$(docker inspect linux-dashboard --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null || true)
     local k v
     for k in DASHBOARD_ALLOWED_NETS DASH_PORT DASH_SUPERADMINS DASH_ADMIN_GROUP DASHBOARD_TOKEN \
@@ -208,17 +222,19 @@ dashboard_env() {
   # Erstinstallation: das Nötigste fragen
   local netze super port
   echo
-  echo "Zugriff: Das Dashboard hat Root-Rechte am Host. Ohne Tunnel/Reverse-Proxy nur aus"
-  echo "vertrauenswürdigen Netzen freigeben (LAN, Tailscale). localhost geht immer."
-  netze=${OPT_NETZE:-$(frage "Erlaubte Netze (Komma, CIDR; * = alle)" "192.168.0.0/16,10.0.0.0/8,100.64.0.0/10,fd7a:115c:a1e0::/48")}
-  super=${OPT_SUPER:-$(frage "Superadmins (Komma-getrennt)" "root${SUDO_USER:+,$SUDO_USER}")}
+  t "Zugriff: Das Dashboard hat Root-Rechte am Host. Ohne Tunnel/Reverse-Proxy nur aus
+vertrauenswürdigen Netzen freigeben (LAN, Tailscale). localhost geht immer." "Access: the dashboard has root rights on the host. Without a tunnel/reverse proxy only allow
+trusted networks (LAN, Tailscale). localhost always works."; echo
+  netze=${OPT_NETZE:-$(frage "$(t 'Erlaubte Netze (Komma, CIDR; * = alle)' 'Allowed networks (comma, CIDR; * = all)')" "192.168.0.0/16,10.0.0.0/8,100.64.0.0/10,fd7a:115c:a1e0::/48")}
+  super=${OPT_SUPER:-$(frage "$(t 'Superadmins (Komma-getrennt)' 'Superadmins (comma-separated)')" "root${SUDO_USER:+,$SUDO_USER}")}
   port=${OPT_PORT:-$(frage "Port" "8420")}
   env_setze DASHBOARD_ALLOWED_NETS "$netze"
   env_setze DASH_SUPERADMINS "$super"
   env_setze DASH_PORT "$port"
+  env_setze CC_SPRACHE "$SPRACHE"
   if [ "$netze" = "*" ]; then
-    warn "DASHBOARD_ALLOWED_NETS=* — das Dashboard ist von überall erreichbar. Dringend eine Firewall"
-    warn "davor setzen oder HTTPS-Reverse-Proxy/Tailscale nutzen."
+    warn "$(t 'DASHBOARD_ALLOWED_NETS=* — das Dashboard ist von überall erreichbar. Dringend eine Firewall' 'DASHBOARD_ALLOWED_NETS=* — the dashboard is reachable from everywhere. Urgently put a firewall')"
+    warn "$(t 'davor setzen oder HTTPS-Reverse-Proxy/Tailscale nutzen.' 'in front or use an HTTPS reverse proxy/Tailscale.')"
   fi
 }
 
@@ -226,10 +242,10 @@ dashboard_env() {
 if [ $DASH -eq 1 ]; then
   install_docker
   if ! docker info >/dev/null 2>&1; then
-    log "Starte Docker-Daemon..."
+    log "$(t 'Starte Docker-Daemon...' 'Starting the Docker daemon...')"
     systemctl start docker 2>/dev/null || service docker start 2>/dev/null || true
     sleep 2
-    docker info >/dev/null 2>&1 || { err "Docker-Daemon nicht erreichbar."; exit 1; }
+    docker info >/dev/null 2>&1 || { err "$(t 'Docker-Daemon nicht erreichbar.' 'Docker daemon not reachable.')"; exit 1; }
   fi
   command -v python3 >/dev/null || { [ "$PM" = apt ] && apt-get install -y -qq python3 >/dev/null; }
 
@@ -245,18 +261,18 @@ if [ $DASH -eq 1 ]; then
   IMG="ghcr.io/slxt47/command-center:$VERSION"
   if grep -q '^CC_IMAGE=' .env 2>/dev/null || [ ! -f .env ]; then echo "CC_IMAGE=$IMG" > .env; fi
   if [ "${CC_BAUEN:-0}" != 1 ] && compose pull -q 2>/dev/null; then
-    log "Fertiges Image geladen: $IMG"
+    log "$(t 'Fertiges Image geladen' 'Ready-made image pulled'): $IMG"
   else
-    log "Baue Image lokal (beim ersten Mal einige Minuten)..."
+    log "$(t 'Baue Image lokal (beim ersten Mal einige Minuten)...' 'Building the image locally (a few minutes the first time)...')"
     compose build
   fi
   if [ "$START" -eq 1 ]; then
-    log "Starte Container..."
+    log "$(t 'Starte Container...' 'Starting the container...')"
     # Alter Container (z. B. aus einem anderen Verzeichnis gestartet) wird ersetzt;
     # Daten liegen in $DATA_DIR und bleiben erhalten.
     if docker inspect linux-dashboard >/dev/null 2>&1 && \
        [ "$(docker inspect linux-dashboard --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}')" != "$REPO" ]; then
-      warn "Ersetze bestehenden Container linux-dashboard (anderes Verzeichnis, --ersetzen)."
+      warn "$(t 'Ersetze bestehenden Container linux-dashboard (anderes Verzeichnis, --ersetzen).' 'Replacing the existing container linux-dashboard (other directory, --ersetzen).')"
       docker rm -f linux-dashboard >/dev/null
     fi
     # Code ist per Volume eingebunden: Neustart erzwingen, sonst laeuft der alte Code weiter.
@@ -271,7 +287,7 @@ fi
 # ─── Schutz-Paket ───────────────────────────────────────────────────────────
 if [ $SCHUTZ -eq 1 ]; then
   echo
-  log "Schutz-Paket (fail2ban + IDS-Wächter) ..."
+  log "$(t 'Schutz-Paket (fail2ban + IDS-Wächter) ...' 'Protection package (fail2ban + IDS guard) ...')"
   if [ $DASH -eq 0 ] && ! docker inspect linux-dashboard >/dev/null 2>&1; then
     SCHUTZ_ARGS+=(--ohne-dashboard-jail)
   fi
@@ -284,12 +300,13 @@ if [ $DASH -eq 1 ] && [ "$START" -eq 1 ]; then
   # eigene IP – „hostname -I“ gibt es nicht überall (Alpine/BusyBox, Arch): Fehler dürfen den Installer nicht beenden
   IP="$( { hostname -I 2>/dev/null || ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p'; } | awk 'NR==1{print $1}' || true)"
   echo
-  log "Fertig!  Linux Command Center $VERSION"
+  log "$(t 'Fertig!' 'Done!')  Linux Command Center $VERSION"
   echo "        →  http://localhost:${PORT}"
-  [ -n "${IP:-}" ] && echo "        →  http://${IP}:${PORT}   (nur aus DASHBOARD_ALLOWED_NETS)"
-  echo "        →  Login mit einem lokalen Systembenutzer (Host-Konto)."
+  [ -n "${IP:-}" ] && echo "        →  http://${IP}:${PORT}   ($(t 'nur aus' 'only from') DASHBOARD_ALLOWED_NETS)"
+  echo "        →  $(t 'Login mit einem lokalen Systembenutzer (Host-Konto).' 'Sign in with a local system user (host account).')"
   echo
-  echo "   Einstellungen:  $ENVF, $ETC/schutz.conf"
-  echo "   Schutz:         waechter status"
-  echo "   Befehle:        sudo command-center status | update | logs | deinstallieren"
+  echo "   $(t 'Einstellungen:' 'Settings:     ')  $ENVF, $ETC/schutz.conf"
+  echo "   $(t 'Sprache:      ' 'Language:     ')  $SPRACHE  ($(t 'ändern' 'change'): sudo command-center sprache de|en)"
+  echo "   $(t 'Schutz:       ' 'Protection:   ')  waechter status"
+  echo "   $(t 'Befehle:      ' 'Commands:     ')  sudo command-center status | update | logs | sprache | deinstallieren"
 fi
