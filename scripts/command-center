@@ -14,7 +14,8 @@ case "${1:-status}" in
   status)
     bash ./install.sh --status
     PORT=$(sed -n 's/^DASH_PORT=//p' /etc/linux-dashboard/dashboard.env 2>/dev/null); PORT=${PORT:-8420}
-    echo "Adresse:           http://$(hostname -I 2>/dev/null | awk '{print $1}'):$PORT  (bzw. http://localhost:$PORT)" ;;
+    IP="$( { hostname -I 2>/dev/null || ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p'; } | awk 'NR==1{print $1}' || true)"
+    echo "Adresse:           http://${IP:-<server>}:$PORT  (bzw. http://localhost:$PORT)" ;;
   update)
     if [ -d .git ]; then git fetch -q --depth 1 origin main && git reset -q --hard origin/main
     else curl -fsSL https://raw.githubusercontent.com/slxt47/command-center/main/get.sh | bash -s -- --update; exit; fi

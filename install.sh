@@ -269,7 +269,8 @@ fi
 # ─── Zusammenfassung ────────────────────────────────────────────────────────
 if [ $DASH -eq 1 ] && [ "$START" -eq 1 ]; then
   PORT=$(sed -n 's/^DASH_PORT=//p' "$ENVF"); PORT=${PORT:-8420}
-  IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  # eigene IP – „hostname -I“ gibt es nicht überall (Alpine/BusyBox, Arch): Fehler dürfen den Installer nicht beenden
+  IP="$( { hostname -I 2>/dev/null || ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p'; } | awk 'NR==1{print $1}' || true)"
   echo
   log "Fertig!  Linux Command Center $VERSION"
   echo "        →  http://localhost:${PORT}"
