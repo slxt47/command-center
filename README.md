@@ -6,7 +6,7 @@
 
 **Deinen Linux-Server im Browser verwalten – Docker, VMs, Terminal, Benutzer und Sicherheit an einem Ort.**
 
-[Produktseite](https://slxt47.github.io/command-center/) · [Installation](#installation) · [Dokumentation](docs/) · [Änderungen](CHANGELOG.md)
+[Produktseite](https://commandcenter.slxt.dev) · [Installation](#installation) · [Dokumentation](docs/) · [Änderungen](CHANGELOG.md)
 
 <sub>🇬🇧 A self-hosted, German-language web control panel for Linux servers: live metrics, Docker, KVM/libvirt VMs,
 persistent multi-tab terminal, fine-grained groups & permissions, fail2ban/IDS attack radar. One-line install below.</sub>
