@@ -3214,13 +3214,20 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 tab = _termtabs.liste(benutzer, superadmin)[0]["id"]
             except Exception:
                 tab = ""
+        if tab and not _termtabs.tmux_da():
+            # Kein tmux auf dem Host: einfache Shell (Tabs gehen, laufen aber nicht weiter, wenn die Verbindung endet)
+            _ws_send(sock, b"\r\n\x1b[33mHinweis: tmux ist auf diesem Server nicht installiert - Tabs laufen nur, solange sie offen sind.\x1b[0m\r\n")
+            tab = ""
         try:
             candidates = [_termtabs.anhaengen_befehl(benutzer, superadmin, tab, cols, rows)] if tab else []
         except Exception as exc:
             _ws_send(sock, f"\r\nFehler: Terminal konnte nicht starten: {exc}\r\n".encode())
             candidates = []
-        if not candidates and superadmin and not tab:
-            candidates = [_ns(['env', '--chdir=/root', 'bash', '-i'])]
+        if not candidates and not tab:
+            try:
+                candidates = [_termtabs.shell_befehl(benutzer, superadmin)]
+            except Exception as exc:
+                _ws_send(sock, f"\r\nFehler: {exc}\r\n".encode())
         for cmd in candidates:
             try:
                 proc = subprocess.Popen(

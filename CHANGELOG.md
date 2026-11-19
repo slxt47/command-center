@@ -6,6 +6,7 @@
 - Ein-Zeilen-Installation (`get.sh`) für Debian, Ubuntu, Fedora, RHEL/Alma/Rocky, Arch, openSUSE; x86_64 und arm64; fertiges Image auf GHCR; Befehl `command-center` (status, update, logs, deinstallieren).
 - Eingebaute **Hilfe** (Seite „Hilfe“, Taste `?`, Suche).
 - Optionale Funktionen über `funktionen.json` statt fester Werte (eingebettete Apps, eigene Startseite, n8n).
+- Terminal auch ohne systemd (tmux direkt) und ohne tmux (einfache Shell mit Hinweis); kein `env --chdir` mehr (BusyBox). Getestet: frische Installation per `get.sh` von GitHub, Anmeldung, alle Schnittstellen, Terminal.
 
 **Was drin ist (Entwicklung bis 3.12)**
 - **Terminal:** mehrere Tabs je Benutzer, laufen weiter bis zum Schließen (tmux über systemd, überlebt Neustarts); Einstellungen je Tab (Name, Anheften, Position), Ziehen, seitliche Tabs; Nicht-Superadmins ohne Root (`no_new_privs`).

@@ -62,10 +62,10 @@ def befehl(benutzer, superadmin, *tmux_args, eigene_scope=False):
     Command-Center-Containers und überlebt dessen Neustart/Neuerstellung (vorher hat Docker ihn mit beendet)."""
     tmux = ["tmux", "-L", "cc", "-f", "/dev/null", *tmux_args]
     vorne = ["systemd-run", "--scope", "--quiet", "--collect", f"--unit=cc-terminal-{secrets.token_hex(4)}",
-             "--description=Command-Center-Terminal"] if eigene_scope else []
+             "--description=Command-Center-Terminal"] if eigene_scope and _host_hat("systemd") else []
     if superadmin:
-        return _ns([*vorne, "env", "--chdir=/root", "HOME=/root", "USER=root", "LOGNAME=root", "SHELL=/bin/bash",
-                    "TERM=xterm-256color", "COLORTERM=truecolor", "LANG=C.UTF-8", *tmux])
+        return _ns([*vorne, "env", "HOME=/root", "USER=root", "LOGNAME=root", "SHELL=/bin/bash",
+                    "TERM=xterm-256color", "COLORTERM=truecolor", "LANG=C.UTF-8", *_in("/root", *tmux)])
     if not _BENUTZER_RE.match(benutzer or ""):
         raise ValueError("Ungültiger Benutzer")
     uid, gid, home = _konto(benutzer)
@@ -73,8 +73,47 @@ def befehl(benutzer, superadmin, *tmux_args, eigene_scope=False):
         raise ValueError("root ohne Superadmin-Rolle ist nicht erlaubt")
     home = home if home and home != "/nonexistent" else "/tmp"
     return _ns([*vorne, "setpriv", "--reuid", str(uid), "--regid", str(gid), "--init-groups", "--no-new-privs", "--inh-caps=-all",
-                "env", "-i", f"--chdir={home}", f"HOME={home}", f"USER={benutzer}", f"LOGNAME={benutzer}", "SHELL=/bin/bash",
-                "PATH=/usr/local/bin:/usr/bin:/bin", "TERM=xterm-256color", "COLORTERM=truecolor", "LANG=C.UTF-8", *tmux])
+                "env", "-i", f"HOME={home}", f"USER={benutzer}", f"LOGNAME={benutzer}", "SHELL=/bin/bash",
+                "PATH=/usr/local/bin:/usr/bin:/bin", "TERM=xterm-256color", "COLORTERM=truecolor", "LANG=C.UTF-8", *_in(home, *tmux)])
+
+
+def _in(ordner, *befehl):
+    """cd + exec – überall verfügbar (env --chdir fehlt z. B. in BusyBox)."""
+    return ["sh", "-c", 'cd "$0" 2>/dev/null || cd /; exec "$@"', ordner, *befehl]
+
+
+_HAT = {}
+
+
+def _host_hat(was):
+    """Gibt es auf dem Host systemd bzw. tmux? (3.13.0: Systeme ohne systemd/tmux, z. B. Alpine, Container-Hosts)"""
+    if was not in _HAT:
+        pruef = ["test", "-d", "/run/systemd/system"] if was == "systemd" else ["sh", "-c", "command -v tmux"]
+        try:
+            _HAT[was] = subprocess.run(_ns(pruef), capture_output=True, timeout=6).returncode == 0
+        except Exception:
+            _HAT[was] = False
+    return _HAT[was]
+
+
+def tmux_da():
+    return _host_hat("tmux")
+
+
+def shell_befehl(benutzer, superadmin):
+    """Einfache Shell ohne tmux (Rückfall): als root bzw. als der Benutzer mit no_new_privs – wie die tmux-Variante."""
+    sh = ["sh", "-c", "command -v bash >/dev/null && exec bash -l || exec sh -l"]
+    if superadmin:
+        return _ns(["env", "HOME=/root", "USER=root", "LOGNAME=root", "TERM=xterm-256color", "LANG=C.UTF-8", *_in("/root", *sh)])
+    if not _BENUTZER_RE.match(benutzer or ""):
+        raise ValueError("Ungültiger Benutzer")
+    uid, gid, home = _konto(benutzer)
+    if uid == 0:
+        raise ValueError("root ohne Superadmin-Rolle ist nicht erlaubt")
+    home = home if home and home != "/nonexistent" else "/tmp"
+    return _ns(["setpriv", "--reuid", str(uid), "--regid", str(gid), "--init-groups", "--no-new-privs", "--inh-caps=-all",
+                "env", "-i", f"HOME={home}", f"USER={benutzer}", f"LOGNAME={benutzer}",
+                "PATH=/usr/local/bin:/usr/bin:/bin", "TERM=xterm-256color", "LANG=C.UTF-8", *_in(home, *sh)])
 
 
 def _lebende(benutzer, superadmin):
