@@ -39,9 +39,8 @@ Die Oberfläche gibt es auf **Deutsch**, **Englisch** und **Spanisch** (Anmeldes
 Zahlenformate). Reihenfolge: eigene Wahl (Einstellungen → Sprache oder Anmeldeseite, im Konto gespeichert) →
 `CC_SPRACHE` → Deutsch.
 
-Eine weitere Sprache ist eine Datei: Wörterbuch `intern/i18n/<code>.json` (Paare Deutsch → Sprache) und
-`intern/i18n/<code>-hilfe.js`, dann `python3 intern/i18n/bauen.py` und die Sprache in `static/icons/i18n.js`
-(`SPRACHEN`) und `dashboard/prefs.py` eintragen. Fehlende Texte zeigt `python3 intern/i18n/pruefen.py <code>`.
+Die Übersetzungen stecken fertig gebaut in `static/icons/sprache-<code>.js`. Fehlt ein Text oder
+wünschst du eine weitere Sprache, öffne ein Issue im Repo.
 
 ## Weitere Dateien
 
