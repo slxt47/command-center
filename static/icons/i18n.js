@@ -39,7 +39,7 @@
     api.daten = d;
     vorbereiten(d);
   };
-  document.write(`<script src="/icons/sprache-${code}.js?v=042f1cb094"><\/script>`);
+  document.write(`<script src="/icons/sprache-${code}.js?v=ca9478c6f1"><\/script>`);
 
   const norm = (s) => s.replace(/\s+/g, ' ').trim();
   let TEXTE = new Map(), MUSTER = [], EINHEITEN = [];

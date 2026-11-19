@@ -1,5 +1,9 @@
 # Änderungen
 
+## 3.15.3 – 2026-11-19
+
+- Spanisch und Englisch: letzte fehlende Texte (Rechte mit ⚠, „Stand vor …“, „frei“, Handy-Menü „Mehr“).
+
 ## 3.15.2 – 2026-11-19
 
 - Browser-Sitzungen zeigen die Uhrzeit des Servers statt UTC (einstellbar mit `CC_ZEITZONE` in dashboard.env).
