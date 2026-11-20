@@ -1,5 +1,20 @@
 # Änderungen
 
+## 3.15.4 – 2026-11-20 · Fehler aus dem Komplett-Test
+
+- **Zugriff aus dem Netz ging nicht:** `docker-compose.yml` band das Command Center fest an `127.0.0.1`, auch bei `--lan`/`--erlaubte-netze`. Die Lauschadresse steht jetzt als `DASH_HOST` in `.env`; der Installer setzt sie passend zu `DASHBOARD_ALLOWED_NETS` (nur lokal → `127.0.0.1`, sonst `0.0.0.0`), ohne Eintrag bleibt es sicher bei `127.0.0.1`.
+- **Ohne fail2ban:** Die Liste „Gesperrte IPs“ zeigt jetzt die Sperren des IDS direkt aus der Firewall (statt eines Fehlers), „IP sperren“ von Hand funktioniert (3 Wochen), und unter Meldungen stehen nur Anwendungen, die es ohne fail2ban gibt. `waechter status` meldet fail2ban als „nicht installiert“ statt als Fehler.
+- **„IP sperren“ von Hand ging nicht** (auch mit fail2ban): Das Schutz-Paket bringt jetzt die Jail `manuell` mit (4 Wochen, Firewall und – falls eingerichtet – Cloudflare-Rand); sie heißt in der Liste „Von Hand“.
+- **Terminal-Tabs:** Der Installer richtet `tmux` ein, damit Tabs weiterlaufen, wenn die Seite zu ist; der Hinweis ohne tmux ist übersetzt.
+- **Schutz-Paket auf Englisch und Spanisch:** Alle Meldungen des Schutz-Installers folgen der gewählten Sprache (vorher nur Deutsch).
+- **Modul IDS abwählen** hält jetzt auch Suricata an (vorher lief es weiter und belegte 1–2 GB RAM).
+- Backup-Befehl und Schutz-Paket melden sich in der gewählten Sprache; fehlende englische/spanische Texte ergänzt (Sperrliste, Konsole, Terminal-Tabs).
+- **Lizenz:** Die Server-Kennung wird jetzt bei jeder Prüfung aus der machine-id des Servers berechnet (vorher aus `lizenz.json` übernommen – ein geklonter Server zählte dann nicht als eigener).
+- **Deinstallieren:** `--alles` entfernt jetzt auch das Schutz-Paket, den Backup-Timer und die Datenbank-Container; ohne Terminal mit `--ja`. Vorher blieben Timer zurück und der Hinweis zum Schutz-Paket zeigte auf einen gerade gelöschten Pfad.
+- `install.sh` direkt aus einem Git-Klon installiert python3 bei Bedarf selbst.
+- `sudo command-center neustart` übernimmt jetzt auch geänderte Einstellungen; `status` zeigt bei „nur lokal“ die richtige Adresse.
+- „Mein Konto“ lud drei nicht vorhandene Bilder (Ebenen-Profilbild ohne Einrichtung); PostgreSQL-Modul installiert ohne seitenlange Download-Ausgabe; Image-Kennzeichnung nennt die richtige Lizenz (Elastic-2.0).
+
 ## 3.15.3 – 2026-11-19
 
 - Spanisch und Englisch: letzte fehlende Texte (Rechte mit ⚠, „Stand vor …“, „frei“, Handy-Menü „Mehr“).

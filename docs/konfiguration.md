@@ -17,6 +17,11 @@ Wirksam nach `sudo command-center neustart`.
 | `DASHBOARD_COOKIE_SECURE` | `auto` | Secure-Cookies: `auto` (nur bei HTTPS), `1`, `0` |
 | `DASH_HOST_PUBLIC_IPS` | automatisch | öffentliche IPs (Gast-Isolation für VMs) |
 
+**Lauschadresse:** `DASH_HOST` steht in `/opt/command-center/.env` (neben `docker-compose.yml`). `127.0.0.1` = nur vom Server
+selbst (Tunnel, Reverse-Proxy, `--nur-lokal`), `0.0.0.0` = alle Interfaces; wer dann wirklich hinein darf, regelt
+`DASHBOARD_ALLOWED_NETS`. Der Installer setzt den Wert passend zu `DASHBOARD_ALLOWED_NETS`, ohne Eintrag gilt `127.0.0.1`.
+Ändern: Wert in `.env` anpassen, dann `sudo command-center neustart`.
+
 ## Mail für „Passwort vergessen?“
 
 Datei `/var/lib/linux-dashboard/mail.env` (0600): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`.

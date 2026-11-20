@@ -86,7 +86,7 @@ sudo command-center sprache en        # Voreinstellung der Sprache ändern (de|e
 sudo command-center lizenz            # Lizenz anzeigen; mit CC-… neuen Schlüssel eintragen
 sudo command-center backup            # Sicherung jetzt (--liste, --zurueck DATEI)
 sudo command-center deinstallieren    # Container + Programm weg, Daten in /var/lib/linux-dashboard bleiben
-sudo command-center deinstallieren --alles
+sudo command-center deinstallieren --alles   # zusätzlich Einstellungen, Daten und Schutz-Paket (ohne Terminal: --ja)
 ```
 
 ## Wo liegt was?

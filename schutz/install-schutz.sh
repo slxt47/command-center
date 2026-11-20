@@ -36,6 +36,9 @@
 # Neue Schluessel werden an diese Dateien nur angehaengt.
 # ---------------------------------------------------------------------------
 set -euo pipefail
+# Sprache der Meldungen: CC_SPRACHE (reicht install.sh durch), sonst dashboard.env, sonst Deutsch
+SPRACHE=${CC_SPRACHE:-$(sed -n 's/^CC_SPRACHE=//p' /etc/linux-dashboard/dashboard.env 2>/dev/null | head -1 || true)}
+t() { case "$SPRACHE" in en) printf '%s' "$2" ;; es) printf '%s' "${3:-$2}" ;; *) printf '%s' "$1" ;; esac; }
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHARE=/usr/local/share/linux-dashboard-schutz
@@ -80,7 +83,7 @@ while [ $# -gt 0 ]; do
         --firewall)           OPT_FW=$2; shift ;;
         --ohne-dashboard-jail) OPT_DASHJAIL=false ;;
         -h|--help)            sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-        *) echo "Unbekannte Option: $1" >&2; exit 1 ;;
+        *) echo "$(t "Unbekannte Option: $1" "Unknown option: $1" "Opción desconocida: $1")" >&2; exit 1 ;;
     esac
     shift
 done
@@ -104,17 +107,17 @@ setze() {   # setze <datei> <KEY> <wert>   (KEY="wert", vorhandene Zeile ersetze
 }
 cget() { python3 "$SRC/lib/schutz.py" get "$1"; }
 
-[ "$(id -u)" -eq 0 ] || { err "Bitte als root ausfuehren (sudo)."; exit 1; }
-command -v systemctl >/dev/null || { err "systemd wird benoetigt."; exit 1; }
-command -v apt-get >/dev/null || { err "Nur Debian/Ubuntu (apt) werden unterstuetzt."; exit 1; }
+[ "$(id -u)" -eq 0 ] || { err "$(t "Bitte als root ausführen (sudo)." "Please run as root (sudo)." "Ejecútalo como root (sudo).")"; exit 1; }
+command -v systemctl >/dev/null || { err "$(t "systemd wird benötigt." "systemd is required." "Se necesita systemd.")"; exit 1; }
+command -v apt-get >/dev/null || { err "$(t "Nur Debian/Ubuntu (apt) werden unterstützt." "Only Debian/Ubuntu (apt) are supported." "Solo se admiten Debian/Ubuntu (apt).")"; exit 1; }
 
 # ===========================================================================
 # Deinstallation
 # ===========================================================================
 if [ "$MODE" = deinstallieren ]; then
-    log "Deinstalliere Schutz-Paket ..."
+    log "$(t "Deinstalliere Schutz-Paket …" "Uninstalling the protection package …" "Desinstalando el paquete de protección …")"
     for u in ids-gesundheit.timer ids-tagesbericht.timer suricata-update-waechter.timer \
-             cf-ban-reconcile.timer ids-watch.service; do
+             cf-ban-reconcile.timer angriffe-sammeln.timer ids-watch.service; do
         systemctl disable --now "$u" 2>/dev/null || true
     done
     if [ -f $SYSD/suricata.service.d/waechter.conf ]; then
@@ -126,7 +129,14 @@ if [ "$MODE" = deinstallieren ]; then
         while read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$MANIFEST"
     fi
     systemctl daemon-reload
-    systemctl reload-or-restart fail2ban 2>/dev/null || true
+    # Neu starten statt reload: reload beendet Jails nicht, deren Konfiguration entfernt wurde.
+    # Startet fail2ban ohne unsere Jails nicht (Debian 12: sshd-Jail ohne /var/log/auth.log), wird es angehalten.
+    if systemctl is-enabled --quiet fail2ban 2>/dev/null; then
+        if ! { systemctl restart fail2ban 2>/dev/null && sleep 3 && systemctl is-active --quiet fail2ban; }; then
+            systemctl disable --now fail2ban >/dev/null 2>&1 || true; systemctl reset-failed fail2ban >/dev/null 2>&1 || true
+            warn "$(t "fail2ban startet ohne die Jails dieses Pakets nicht und wurde angehalten (Paket entfernen: apt purge fail2ban)." "fail2ban does not start without this package's jails and was stopped (remove the package: apt purge fail2ban)." "fail2ban no arranca sin los jails de este paquete y se ha detenido (quitar el paquete: apt purge fail2ban).")"
+        fi
+    fi
     for s in ids_ban4 ids_ban6 ssh_ban4 ssh_ban6 perm_ban4 perm_ban6 f2b_long4 f2b_long6 f2b_net4 blk_net4; do
         ipset destroy "$s" 2>/dev/null || true     # scheitert still, solange eine fremde Regel es nutzt
     done
@@ -134,11 +144,11 @@ if [ "$MODE" = deinstallieren ]; then
     if [ $ALLES -eq 1 ]; then
         rm -f "$CONF" "$ETC/schutz-netze.generiert" "$ETC/blk_net4.txt" /etc/ids-watch.conf \
               /etc/ids-watch.whitelist $F2B/jail.d/waechter.local
-        log "Konfiguration entfernt."
+        log "$(t "Konfiguration entfernt." "Configuration removed." "Configuración eliminada.")"
     else
-        log "Konfiguration bleibt erhalten ($CONF, /etc/ids-watch.conf, $F2B/jail.d/waechter.local)."
+        log "$(t "Konfiguration bleibt erhalten ($CONF, /etc/ids-watch.conf, $F2B/jail.d/waechter.local)." "Configuration is kept ($CONF, /etc/ids-watch.conf, $F2B/jail.d/waechter.local)." "La configuración se conserva ($CONF, /etc/ids-watch.conf, $F2B/jail.d/waechter.local).")"
     fi
-    log "Fertig. Pakete (fail2ban, suricata) bleiben installiert: apt purge suricata"
+    log "$(t "Fertig. Pakete (fail2ban, suricata) bleiben installiert: apt purge suricata" "Done. Packages (fail2ban, suricata) stay installed: apt purge suricata" "Listo. Los paquetes (fail2ban, suricata) siguen instalados: apt purge suricata")"
     exit 0
 fi
 
@@ -152,24 +162,24 @@ if [ -z "$INSTALLIERT" ] && [ ! -f "$MANIFEST" ] && { [ -f $SBIN/ids-watch.py ] 
 fi
 
 if [ "$MODE" = anwenden ]; then
-    [ -n "$INSTALLIERT" ] || { err "Schutz-Paket ist nicht installiert."; exit 1; }
-    log "Wende $CONF an ..."
+    [ -n "$INSTALLIERT" ] || { err "$(t "Schutz-Paket ist nicht installiert." "The protection package is not installed." "El paquete de protección no está instalado.")"; exit 1; }
+    log "$(t "Wende $CONF an …" "Applying $CONF …" "Aplicando $CONF …")"
 elif [ $ALTBESTAND -eq 1 ] && [ $UEBERNEHMEN -eq 0 ]; then
-    err "Auf diesem Server ist bereits ein manuell eingerichteter Waechter (fail2ban/IDS) vorhanden,"
-    err "der nicht aus diesem Paket stammt (z. B. $SBIN/ids-watch.py)."
-    err "Uebernehmen mit:  ./install.sh --uebernehmen   (bzw. schutz/install-schutz.sh --uebernehmen)"
-    err "Dabei werden Paket-Dateien mit gleichem Namen ersetzt (Sicherung in /var/backups/linux-dashboard-schutz/),"
-    err "eigene Jail-Dateien in $F2B/jail.d/ bleiben unveraendert und gelten weiter."
+    err "$(t "Auf diesem Server ist bereits ein von Hand eingerichteter Wächter (fail2ban/IDS) vorhanden," "This server already has a manually set up guard (fail2ban/IDS)" "Este servidor ya tiene un vigilante (fail2ban/IDS) configurado a mano")"
+    err "$(t "der nicht aus diesem Paket stammt (z. B. $SBIN/ids-watch.py)." "that does not come from this package (e.g. $SBIN/ids-watch.py)." "que no procede de este paquete (p. ej. $SBIN/ids-watch.py).")"
+    err "$(t "Übernehmen mit:  ./install.sh --uebernehmen   (bzw. schutz/install-schutz.sh --uebernehmen)" "Take over with:  ./install.sh --uebernehmen   (or schutz/install-schutz.sh --uebernehmen)" "Para adoptarlo:  ./install.sh --uebernehmen   (o schutz/install-schutz.sh --uebernehmen)")"
+    err "$(t "Dabei werden Paket-Dateien mit gleichem Namen ersetzt (Sicherung in /var/backups/linux-dashboard-schutz/)," "Package files with the same name are replaced (backup in /var/backups/linux-dashboard-schutz/)," "Se reemplazan los archivos del paquete con el mismo nombre (copia en /var/backups/linux-dashboard-schutz/),")"
+    err "$(t "eigene Jail-Dateien in $F2B/jail.d/ bleiben unverändert und gelten weiter." "your own jail files in $F2B/jail.d/ stay unchanged and remain active." "tus propios archivos de jail en $F2B/jail.d/ no cambian y siguen activos.")"
     exit 2
 elif [ -n "$INSTALLIERT" ] && ver_lt "$VERSION" "$INSTALLIERT" && [ $FORCE -eq 0 ]; then
-    err "Installiert ist $INSTALLIERT, dieses Paket ist aelter ($VERSION). Abbruch (--force zum Erzwingen)."
+    err "$(t "Installiert ist $INSTALLIERT, dieses Paket ist älter ($VERSION). Abbruch (--force zum Erzwingen)." "$INSTALLIERT is installed, this package is older ($VERSION). Aborting (--force to override)." "Está instalada la $INSTALLIERT, este paquete es más antiguo ($VERSION). Cancelado (--force para forzar).")"
     exit 1
 elif [ -n "$INSTALLIERT" ]; then
-    log "Update $INSTALLIERT -> $VERSION"
+    log "$(t "Update $INSTALLIERT → $VERSION" "Update $INSTALLIERT → $VERSION" "Actualización $INSTALLIERT → $VERSION")"
 elif [ $ALTBESTAND -eq 1 ]; then
-    log "Uebernahme der manuell eingerichteten Vorversion -> $VERSION"
+    log "$(t "Übernahme der von Hand eingerichteten Vorversion → $VERSION" "Taking over the manually set up previous version → $VERSION" "Adoptando la versión anterior configurada a mano → $VERSION")"
 else
-    log "Erstinstallation $VERSION"
+    log "$(t "Erstinstallation $VERSION" "First installation $VERSION" "Primera instalación $VERSION")"
 fi
 
 # ===========================================================================
@@ -181,7 +191,7 @@ if [ ! -f "$CONF" ]; then
     NEU_CONF=1
     install -m 600 "$SRC/config/schutz.conf.example" "$CONF"
     if [ $ALTBESTAND -eq 1 ]; then
-        log "Uebernehme Werte aus der Vorversion:"
+        log "$(t "Übernehme Werte aus der Vorversion:" "Taking over values from the previous version:" "Se toman los valores de la versión anterior:")"
         while IFS='=' read -r k v; do
             v=${v#\"}; v=${v%\"}
             setze "$CONF" "$k" "$v"
@@ -195,17 +205,23 @@ if [ ! -f "$CONF" ]; then
     if [ -n "$OPT_TRUSTED" ]; then t=$OPT_TRUSTED
     else
         echo
-        echo "Eigene Anschluesse (Admin-IPs) werden NIE gesperrt. Wichtig: ein einziger"
-        echo "ungueltiger SSH-Login sperrt sonst fuer eine Woche (Tailscale/LAN sind immer frei)."
-        t=$(frage "Eigene IPs/Netze (Leerzeichen-getrennt, leer = keine)" "$t_def")
+        t "Eigene Anschlüsse (Admin-IPs) werden NIE gesperrt (Tailscale/LAN sind immer frei)." \
+          "Your own connections (admin IPs) are NEVER banned (Tailscale/LAN are always allowed)." \
+          "Tus conexiones (IPs de administración) NUNCA se bloquean (Tailscale/LAN siempre están permitidas)."; echo
+        if [ "$(cget F2B_AKTIV 2>/dev/null)" != 0 ]; then
+            t "Wichtig: ein einziger ungültiger SSH-Login sperrt sonst für eine Woche." \
+              "Important: otherwise a single invalid SSH login bans for a week." \
+              "Importante: si no, un solo inicio de sesión SSH no válido bloquea durante una semana."; echo
+        fi
+        t=$(frage "$(t "Eigene IPs/Netze (Leerzeichen-getrennt, leer = keine)" "Your own IPs/networks (space-separated, empty = none)" "Tus IPs/redes (separadas por espacios, vacío = ninguna)")" "$t_def")
     fi
     setze "$CONF" TRUSTED_IPS "$t"
 
     if [ -n "$OPT_IDS" ]; then ids=$OPT_IDS
     else
         cur=$(sed -n 's/^IDS_AKTIV="\(.*\)"/\1/p' "$CONF")
-        a=$(frage "IDS-Waechter (Suricata) installieren? Braucht ~1-2 GB RAM (j/n)" "$([ "$cur" = 0 ] && echo n || echo j)")
-        case "$a" in n*|N*) ids=0 ;; *) ids=1 ;; esac
+        a=$(frage "$(t "IDS-Wächter (Suricata) installieren? Braucht ~1–2 GB RAM (j/n)" "Install the IDS guard (Suricata)? Needs ~1–2 GB RAM (y/n)" "¿Instalar el vigilante IDS (Suricata)? Necesita ~1–2 GB de RAM (s/n)")" "$([ "$cur" = 0 ] && echo n || echo j)")
+        case "$a" in n*|N*) ids=0 ;; *) ids=1 ;; esac   # j/y/s = ja
     fi
     setze "$CONF" IDS_AKTIV "$ids"
 
@@ -215,11 +231,11 @@ if [ ! -f "$CONF" ]; then
         setze "$CONF" NTFY_URL "$OPT_NTFY_URL"; setze "$CONF" NTFY_TOPIC "$OPT_NTFY_TOPIC"
         setze "$CONF" NTFY_TOKEN "$OPT_NTFY_TOKEN"
     elif ! grep -q '^NTFY_URL="[a-z]' "$CONF"; then
-        u=$(frage "ntfy-Server fuer Push-Meldungen (z. B. https://ntfy.sh, leer = keine Pushes)" "")
+        u=$(frage "$(t "ntfy-Server für Push-Meldungen (z. B. https://ntfy.sh, leer = keine Pushes)" "ntfy server for push messages (e.g. https://ntfy.sh, empty = no pushes)" "Servidor ntfy para avisos push (p. ej. https://ntfy.sh, vacío = sin avisos)")" "")
         if [ -n "$u" ]; then
             setze "$CONF" NTFY_URL "$u"
             setze "$CONF" NTFY_TOPIC "$(frage "ntfy-Topic" "server-$(hostname -s)")"
-            setze "$CONF" NTFY_TOKEN "$(frage "ntfy-Zugangstoken (leer = ohne)" "")"
+            setze "$CONF" NTFY_TOKEN "$(frage "$(t "ntfy-Zugangstoken (leer = ohne)" "ntfy access token (empty = none)" "Token de acceso de ntfy (vacío = sin token)")" "")"
         fi
     fi
 else
@@ -236,10 +252,10 @@ chmod 600 "$CONF"
 
 IDS=$(cget IDS_AKTIV); CF=$(cget CLOUDFLARE); FW=$(cget FIREWALL); FB=$(cget F2B_AKTIV); RADAR=$(cget RADAR_AKTIV)
 if [ "$FB" != 1 ] && [ "$CF" = 1 ]; then
-    warn "Cloudflare-Rand-Sperre braucht fail2ban – ohne fail2ban abgeschaltet."; CF=0; setze "$CONF" CLOUDFLARE 0
+    warn "$(t "Cloudflare-Rand-Sperre braucht fail2ban – ohne fail2ban abgeschaltet." "Cloudflare edge blocking needs fail2ban – turned off without fail2ban." "El bloqueo en el borde de Cloudflare necesita fail2ban: desactivado sin fail2ban.")"; CF=0; setze "$CONF" CLOUDFLARE 0
 fi
 if [ "$FB" != 1 ] && [ "$(cget DASHBOARD_JAIL)" != false ]; then
-    warn "Ohne fail2ban gibt es keine Sperre nach falschen Logins (SSH, Command Center)."
+    warn "$(t "Ohne fail2ban gibt es keine Sperre nach falschen Logins (SSH, Command Center)." "Without fail2ban there is no ban after failed logins (SSH, Command Center)." "Sin fail2ban no hay bloqueo tras inicios de sesión fallidos (SSH, Command Center).")"
 fi
 log "Module: fail2ban=$FB IDS=$IDS Radar=$RADAR Firewall=$FW Cloudflare=$CF"
 
@@ -253,14 +269,14 @@ if [ "$MODE" != anwenden ]; then
     [ "$FB" = 1 ] && PKGS="fail2ban $PKGS"
     if [ "$IDS" = 1 ] && ! command -v suricata >/dev/null; then
         if [ "$OS_ID" = ubuntu ] && [ "$(cget SURICATA_PPA)" = 1 ]; then
-            log "Fuege OISF-PPA fuer aktuelles Suricata hinzu ..."
+            log "$(t "Füge OISF-PPA für aktuelles Suricata hinzu …" "Adding the OISF PPA for a current Suricata …" "Añadiendo el PPA de OISF para un Suricata actual …")"
             apt-get update -qq
             apt-get install -y -qq software-properties-common >/dev/null
             add-apt-repository -y ppa:oisf/suricata-stable >/dev/null
         fi
         SURICATA_NOETIG=1
     fi
-    log "Installiere Pakete: $PKGS${SURICATA_NOETIG:+ suricata}"
+    log "$(t "Installiere Pakete: $PKGS${SURICATA_NOETIG:+ suricata}" "Installing packages: $PKGS${SURICATA_NOETIG:+ suricata}" "Instalando paquetes: $PKGS${SURICATA_NOETIG:+ suricata}")"
     apt-get update -qq
     # shellcheck disable=SC2086
     apt-get install -y -qq $PKGS >/dev/null
@@ -270,18 +286,18 @@ if [ "$MODE" != anwenden ]; then
         elif [ "$OS_ID" = debian ]; then
             # Debian 12: Suricata gibt es nur in den Backports
             CODENAME=$(. /etc/os-release; echo "$VERSION_CODENAME")
-            log "Suricata aus ${CODENAME}-backports ..."
+            log "$(t "Suricata aus ${CODENAME}-backports …" "Suricata from ${CODENAME}-backports …" "Suricata desde ${CODENAME}-backports …")"
             echo "deb http://deb.debian.org/debian ${CODENAME}-backports main" \
                 > /etc/apt/sources.list.d/linux-dashboard-backports.list
             apt-get update -qq
             apt-get install -y -qq -t "${CODENAME}-backports" suricata >/dev/null
         else
-            err "Suricata ist fuer dieses System nicht verfuegbar - IDS mit --ohne-ids abschalten."
+            err "$(t "Suricata ist für dieses System nicht verfügbar – IDS mit --ohne-ids abschalten." "Suricata is not available for this system – turn the IDS off with --ohne-ids." "Suricata no está disponible para este sistema: desactiva el IDS con --ohne-ids.")"
             exit 1
         fi
     fi
     if [ "$IDS" = 1 ] && ! command -v suricata-update >/dev/null; then
-        apt-get install -y -qq suricata-update >/dev/null || warn "suricata-update nicht installierbar"
+        apt-get install -y -qq suricata-update >/dev/null || warn "$(t "suricata-update nicht installierbar" "suricata-update could not be installed" "No se pudo instalar suricata-update")"
     fi
 fi
 
@@ -289,7 +305,7 @@ fi
 # Weitere Konfigurationsdateien (gehoeren dem Benutzer, nur anlegen/ergaenzen)
 # ===========================================================================
 anlegen() {   # anlegen <beispiel> <ziel> <modus>
-    if [ ! -f "$2" ]; then install -m "$3" "$1" "$2"; log "angelegt: $2"
+    if [ ! -f "$2" ]; then install -m "$3" "$1" "$2"; log "$(t "angelegt: $2" "created: $2" "creado: $2")"
     else python3 "$SRC/lib/schutz.py" conf-merge "$1" "$2"; fi
 }
 anlegen "$SRC/config/blk_net4.txt.example" "$ETC/blk_net4.txt" 644
@@ -302,20 +318,24 @@ if [ "$IDS" = 1 ]; then
         m=$OPT_MODUS
         if [ -z "$m" ]; then
             echo
-            echo "IDS-Modus: 'melden' protokolliert nur, was gesperrt wuerde (empfohlen fuer die"
-            echo "ersten Tage), 'sperren' sperrt Angreifer und boesartige Ziele sofort."
-            m=$(frage "IDS-Modus (melden/sperren)" "melden")
+            t "IDS-Modus: 'melden' protokolliert nur, was gesperrt würde (empfohlen für die ersten Tage)," \
+              "IDS mode: 'melden' only logs what would be banned (recommended for the first days)," \
+              "Modo IDS: 'melden' solo registra lo que se bloquearía (recomendado los primeros días),"; echo
+            t "'sperren' sperrt Angreifer und bösartige Ziele sofort." \
+              "'sperren' bans attackers and malicious targets right away." \
+              "'sperren' bloquea al momento a atacantes y destinos maliciosos."; echo
+            m=$(frage "$(t "IDS-Modus (melden/sperren)" "IDS mode (melden = report only / sperren = block)" "Modo IDS (melden = solo avisar / sperren = bloquear)")" "melden")
         fi
         case "$m" in sperren) ;; *) m=melden ;; esac
         sed -i "s/^MODUS=.*/MODUS=$m/" /etc/ids-watch.conf
-        log "IDS-Modus: $m (spaeter: waechter ids-modus sperren)"
+        log "$(t "IDS-Modus: $m (später: waechter ids-modus sperren)" "IDS mode: $m (later: waechter ids-modus sperren)" "Modo IDS: $m (más tarde: waechter ids-modus sperren)")"
     else
         python3 "$SRC/lib/schutz.py" conf-merge "$SRC/config/ids-watch.conf.example" /etc/ids-watch.conf
         if [ $ALTBESTAND -eq 1 ]; then
             while IFS='=' read -r k v; do
                 [ -n "$k" ] || continue
                 sed -i "s|^$k=.*|$k=$v|" /etc/ids-watch.conf
-                log "Altbestand: $k=$v (ids-watch.conf)"
+                log "$(t "Altbestand: $k=$v (ids-watch.conf)" "Existing: $k=$v (ids-watch.conf)" "Existente: $k=$v (ids-watch.conf)")"
             done < <(python3 "$SRC/lib/schutz.py" altbestand-ids)
         fi
     fi
@@ -325,14 +345,14 @@ if [ "$IDS" = 1 ]; then
 fi
 if [ "$CF" = 1 ] && [ ! -f $F2B/cloudflare.local ]; then
     install -m 600 "$SRC/config/cloudflare.local.example" $F2B/cloudflare.local
-    warn "Cloudflare: Token in $F2B/cloudflare.local eintragen, dann $SBIN/cf-ban-setup.sh ausfuehren."
+    warn "$(t "Cloudflare: Token in $F2B/cloudflare.local eintragen, dann $SBIN/cf-ban-setup.sh ausführen." "Cloudflare: enter the token in $F2B/cloudflare.local, then run $SBIN/cf-ban-setup.sh." "Cloudflare: pon el token en $F2B/cloudflare.local y ejecuta $SBIN/cf-ban-setup.sh.")"
 fi
 
 # ===========================================================================
 # Netze berechnen
 # ===========================================================================
-log "Netze:"
 python3 "$SRC/lib/schutz.py" netze
+log "$(t "Netze" "Networks" "Redes"): WAN=$(sed -n 's/^WAN_IF="\(.*\)"/\1/p' "$ETC/schutz-netze.generiert" 2>/dev/null), $(t "Server" "server" "servidor") $(sed -n 's/^SERVER_NETZE="\(.*\)"/\1/p' "$ETC/schutz-netze.generiert" 2>/dev/null)"
 
 # ===========================================================================
 # Paket-Dateien installieren (mit Sicherung und Manifest)
@@ -415,13 +435,13 @@ inst "$SRC/logrotate/linux-dashboard-schutz" /etc/logrotate.d/linux-dashboard-sc
 if [ $ALTBESTAND -eq 1 ] && [ "$MODE" != anwenden ]; then
     if [ -f $SYSD/suricata.service.d/ids.conf ]; then
         sichern $SYSD/suricata.service.d/ids.conf; rm -f $SYSD/suricata.service.d/ids.conf
-        log "Altbestand: suricata-Drop-in ids.conf ersetzt durch waechter.conf"
+        log "$(t "Altbestand: suricata-Drop-in ids.conf ersetzt durch waechter.conf" "Existing: suricata drop-in ids.conf replaced by waechter.conf" "Existente: drop-in de suricata ids.conf sustituido por waechter.conf")"
     fi
     if [ -f $SYSD/suricata-update.timer ] && [ "$IDS" = 1 ]; then
         systemctl disable --now suricata-update.timer 2>/dev/null || true
         sichern $SYSD/suricata-update.timer; sichern $SYSD/suricata-update.service
         rm -f $SYSD/suricata-update.timer $SYSD/suricata-update.service
-        log "Altbestand: suricata-update.timer ersetzt durch suricata-update-waechter.timer"
+        log "$(t "Altbestand: suricata-update.timer ersetzt durch suricata-update-waechter.timer" "Existing: suricata-update.timer replaced by suricata-update-waechter.timer" "Existente: suricata-update.timer sustituido por suricata-update-waechter.timer")"
     fi
     if [ -f /etc/logrotate.d/ids-watch ]; then
         sichern /etc/logrotate.d/ids-watch; rm -f /etc/logrotate.d/ids-watch
@@ -434,7 +454,7 @@ if [ -f "$MANIFEST" ]; then
     sort -u "$NEUES_MANIFEST" > "$NEUES_MANIFEST.neu"
     comm -23 "$NEUES_MANIFEST.alt" "$NEUES_MANIFEST.neu" | while read -r f; do
         [ -n "$f" ] && [ -e "$f" ] || continue
-        sichern "$f"; rm -f "$f"; log "entfernt (nicht mehr im Paket): $f"
+        sichern "$f"; rm -f "$f"; log "$(t "entfernt (nicht mehr benötigt): $f" "removed (no longer needed): $f" "eliminado (ya no se necesita): $f")"
     done
     rm -f "$NEUES_MANIFEST.alt" "$NEUES_MANIFEST.neu"
 fi
@@ -456,11 +476,11 @@ systemctl daemon-reload
 if [ "$FW" = eigen ]; then
     systemctl enable waechter-firewall.service >/dev/null 2>&1
     systemctl restart waechter-firewall.service
-    log "Firewall: Ketten WAECHTER-* aktiv"
+    log "$(t "Firewall: Ketten WAECHTER-* aktiv" "Firewall: chains WAECHTER-* active" "Firewall: cadenas WAECHTER-* activas")"
 else
     systemctl disable --now waechter-firewall.service >/dev/null 2>&1 || true
     $SBIN/waechter-firewall.sh --nur-sets >/dev/null
-    log "Firewall: nur ipsets (FIREWALL=aus) - eigene Firewall muss die Sets einhaengen"
+    log "$(t "Firewall: nur ipsets (FIREWALL=aus) – die eigene Firewall muss die Sets einhängen" "Firewall: ipsets only (FIREWALL=aus) – your own firewall must hook in the sets" "Firewall: solo ipsets (FIREWALL=aus): tu propio firewall debe enlazar los conjuntos")"
 fi
 
 # ===========================================================================
@@ -476,26 +496,32 @@ if [ "$IDS" = 1 ]; then
     $SBIN/gen-suricata-ids-yaml.py --iface "$WAN" --home "$(cget SURICATA_HOME_NET)" \
         --threads "$(cget IDS_THREADS)" 2>/dev/null
     if [ ! -s /var/lib/suricata/rules/suricata.rules ] || [ "$MODE" != anwenden ]; then
-        log "Lade Suricata-Regeln (ET Open) ..."
+        log "$(t "Lade Suricata-Regeln (ET Open) …" "Loading Suricata rules (ET Open) …" "Cargando reglas de Suricata (ET Open) …")"
         suricata-update --suricata-conf /etc/suricata/suricata-ids.yaml -q >/dev/null 2>&1 \
-            || warn "suricata-update fehlgeschlagen (Netz?) - naechster Versuch per Timer"
+            || warn "$(t "suricata-update fehlgeschlagen (Netz?) – nächster Versuch per Timer" "suricata-update failed (network?) – next attempt via timer" "suricata-update falló (¿red?): siguiente intento por temporizador")"
     fi
     if [ -s /var/lib/suricata/rules/suricata.rules ]; then
         if ! suricata -T -c /etc/suricata/suricata-ids.yaml >/tmp/suricata-test.$$ 2>&1; then
-            err "Suricata-Konfigtest fehlgeschlagen:"; tail -5 /tmp/suricata-test.$$ >&2
+            err "$(t "Suricata-Konfigtest fehlgeschlagen:" "Suricata configuration test failed:" "Falló la prueba de configuración de Suricata:")"; tail -5 /tmp/suricata-test.$$ >&2
         fi
         rm -f /tmp/suricata-test.$$
     fi
     systemctl enable suricata.service >/dev/null 2>&1
-    systemctl restart suricata.service || warn "Suricata startet nicht: journalctl -u suricata"
+    systemctl restart suricata.service || warn "$(t "Suricata startet nicht: journalctl -u suricata" "Suricata does not start: journalctl -u suricata" "Suricata no arranca: journalctl -u suricata")"
     systemctl enable --now suricata-update-waechter.timer ids-gesundheit.timer ids-tagesbericht.timer >/dev/null 2>&1
     systemctl enable ids-watch.service >/dev/null 2>&1
     systemctl restart ids-watch.service
-    log "IDS-Waechter aktiv (Interface $WAN, Modus $(sed -n 's/^MODUS=//p' /etc/ids-watch.conf))"
+    log "$(t "IDS-Wächter aktiv (Interface $WAN, Modus $(sed -n 's/^MODUS=//p' /etc/ids-watch.conf))" "IDS guard active (interface $WAN, mode $(sed -n 's/^MODUS=//p' /etc/ids-watch.conf))" "Vigilante IDS activo (interfaz $WAN, modo $(sed -n 's/^MODUS=//p' /etc/ids-watch.conf))")"
 else
     for u in ids-watch.service ids-gesundheit.timer ids-tagesbericht.timer suricata-update-waechter.timer; do
         systemctl disable --now "$u" >/dev/null 2>&1 || true
     done
+    # Modul IDS abgewählt: das von diesem Paket eingerichtete Suricata anhalten (spart 1–2 GB RAM).
+    # Ein eigenes Suricata ohne unsere Konfiguration bleibt unberührt.
+    if [ -f /etc/suricata/suricata-ids.yaml ] && systemctl is-enabled --quiet suricata.service 2>/dev/null; then
+        systemctl disable --now suricata.service >/dev/null 2>&1 || true; systemctl reset-failed suricata.service >/dev/null 2>&1 || true
+        log "$(t "IDS aus: Suricata angehalten (Paket bleibt installiert: apt purge suricata)" "IDS off: Suricata stopped (package stays installed: apt purge suricata)" "IDS desactivado: Suricata detenido (el paquete sigue instalado: apt purge suricata)")"
+    fi
 fi
 if [ "$CF" = 1 ]; then
     systemctl enable --now cf-ban-reconcile.timer >/dev/null 2>&1
@@ -505,7 +531,7 @@ fi
 if [ "$RADAR" = 1 ]; then
     install -d -m 750 /var/log/angriffe; touch /var/log/angriffe/web.log
     systemctl enable --now angriffe-sammeln.timer >/dev/null 2>&1
-    log "Angriffs-Radar aktiv (alle 2 min)"
+    log "$(t "Angriffs-Radar aktiv (alle 2 min)" "Attack radar active (every 2 min)" "Radar de ataques activo (cada 2 min)")"
 else
     systemctl disable --now angriffe-sammeln.timer >/dev/null 2>&1 || true
 fi
@@ -521,11 +547,11 @@ fi
 if [ "$FB" != 1 ]; then
     # Frueher installierte Paket-Jails sind per Manifest entfernt; fremde fail2ban-Konfiguration bleibt unberuehrt.
     command -v fail2ban-client >/dev/null && systemctl is-active --quiet fail2ban && { fail2ban-client reload >/dev/null 2>&1 || true; }
-    log "fail2ban: nicht Teil dieser Installation (F2B_AKTIV=0)"
+    log "$(t "fail2ban: nicht Teil dieser Installation (F2B_AKTIV=0)" "fail2ban: not part of this installation (F2B_AKTIV=0)" "fail2ban: no forma parte de esta instalación (F2B_AKTIV=0)")"
 elif ! fail2ban-client -t >/tmp/f2b-test.$$ 2>&1; then
-    err "fail2ban-Konfiguration fehlerhaft:"; grep -iE 'error|fehler' /tmp/f2b-test.$$ | tail -8 >&2
+    err "$(t "fail2ban-Konfiguration fehlerhaft:" "fail2ban configuration has errors:" "La configuración de fail2ban tiene errores:")"; grep -iE 'error|fehler' /tmp/f2b-test.$$ | tail -8 >&2
     if [ -d "$BACKUP$F2B" ]; then
-        err "Stelle die vorherigen fail2ban-Dateien wieder her ($BACKUP$F2B)."
+        err "$(t "Stelle die vorherigen fail2ban-Dateien wieder her ($BACKUP$F2B)." "Restoring the previous fail2ban files ($BACKUP$F2B)." "Restaurando los archivos anteriores de fail2ban ($BACKUP$F2B).")"
         cp -a "$BACKUP$F2B"/. $F2B/
     fi
     rm -f /tmp/f2b-test.$$
@@ -544,11 +570,11 @@ if [ "$FB" = 1 ]; then
         [ -n "$jails" ] && break
         sleep 1
     done
-    log "fail2ban: ${jails:-KEINE JAILS AKTIV - journalctl -u fail2ban}"
+    log "$(t "fail2ban: ${jails:-KEINE JAILS AKTIV – journalctl -u fail2ban}" "fail2ban: ${jails:-NO JAILS ACTIVE – journalctl -u fail2ban}" "fail2ban: ${jails:-NINGÚN JAIL ACTIVO – journalctl -u fail2ban}")"
 fi
 
 if [ "$MODE" != anwenden ]; then
     echo "$VERSION" > "$VERFILE"
-    [ -d "$BACKUP" ] && log "Sicherung der ersetzten Dateien: $BACKUP"
+    [ -d "$BACKUP" ] && log "$(t "Sicherung der ersetzten Dateien: $BACKUP" "Backup of the replaced files: $BACKUP" "Copia de los archivos reemplazados: $BACKUP")"
 fi
-log "Fertig. Status: waechter status   |   Freigeben: waechter freigeben <ip>"
+log "$(t "Fertig. Status: waechter status   |   Freigeben: waechter freigeben <ip>" "Done. Status: waechter status   |   Unban: waechter freigeben <ip>" "Listo. Estado: waechter status   |   Desbloquear: waechter freigeben <ip>")"

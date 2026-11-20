@@ -92,7 +92,7 @@
       <details><summary>Warum geht im Terminal kein <code>sudo</code>?</summary><p>Wer nicht Superadmin ist, bekommt bewusst eine Shell ohne Root-Rechte. Superadmins legt <code>DASH_SUPERADMINS</code> in <code>/etc/linux-dashboard/dashboard.env</code> fest.</p></details>
       <details><summary>Wie viel Leistung braucht das Command Center?</summary><p>Das Command Center selbst etwa 100–200 MB RAM. Der IDS (Suricata) braucht 1–2 GB – wer wenig RAM hat, lässt das Modul <b>ids</b> weg.</p></details>
       <details><summary>Wo liegen Einstellungen und Daten?</summary><p>Einstellungen: <code>/etc/linux-dashboard/</code> (<code>dashboard.env</code>, <code>schutz.conf</code>, <code>module.conf</code>). Daten: <code>/var/lib/linux-dashboard/</code>. Programm: <code>/opt/command-center</code>.</p></details>
-      <details><summary>Wie entferne ich das Command Center?</summary><p><code>sudo command-center deinstallieren</code> – Daten bleiben; mit <code>--alles</code> auch Daten und Einstellungen.</p></details>`],
+      <details><summary>Wie entferne ich das Command Center?</summary><p><code>sudo command-center deinstallieren</code> – Daten bleiben; mit <code>--alles</code> auch Daten, Einstellungen und das Schutz-Paket (fail2ban/IDS/Firewall).</p></details>`],
     ['probleme', 'Wenn etwas nicht geht', [], `
       <ul><li><b>„Dafür fehlt dir das Recht …“</b> – ein Superadmin kann dich unter Benutzer → Gruppen freischalten.</li>
       <li><b>Seite lädt nicht / alte Ansicht:</b> neu laden (${K('⌘/Strg')} + ${K('⇧')} + ${K('R')}).</li>

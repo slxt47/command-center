@@ -64,6 +64,7 @@ DEFAULT_APPS = [
     ("SSH",               ["sshd", "sshd-invalid"], []),
     ("IDS-Wächter",       ["ids-angriff", "ids-ausgang"], []),
     ("Dauersperre",       ["dauersperre", "dauersperre-web"], []),
+    ("Von Hand",          ["manuell"], []),
 ]
 APPS_FILE = DATA_DIR / "security_apps.json"
 
@@ -121,6 +122,8 @@ def _apps_rechnen():
     except (OSError, ValueError, KeyError, TypeError):
         pass
     running = _running_jails()
+    if not f2b_da():                    # Modul fail2ban abgewählt: nur IDS/manuell + Login-Dienste
+        running = ["ids-angriff", "ids-ausgang", "dauersperre", MANUAL_JAIL]
     if running is None:                 # fail2ban nicht erreichbar: alles zeigen
         apps = list(base)
     else:
@@ -542,8 +545,59 @@ def _anschluss(ip):
     return str(ipaddress.ip_network(f"{a}/64", strict=False)) if a.version == 6 else str(a)
 
 
+def f2b_da():
+    """Ist fail2ban auf dem Host installiert? (Modul „fail2ban“ kann abgewählt sein)"""
+    return any(os.path.exists(_host(p)) for p in ("/usr/bin/fail2ban-client", "/usr/local/bin/fail2ban-client"))
+
+
+IPSET_JAILS = {"ids_ban": "ids-angriff", "perm_ban": "dauersperre"}
+
+
+def _ipset_sperren():
+    """Ohne fail2ban: Sperren direkt aus den ipsets des Schutz-Pakets.
+    {(ip, jail): (seit, dauer, 1, bis)} – „seit“ aus Protokollen, „bis“ aus dem ipset-Timeout."""
+    r = subprocess.run(_ns(["ipset", "save"]), capture_output=True, text=True, timeout=20)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or "ipset nicht abfragbar").strip()[:300])
+    seit, manuell = {}, set()
+    try:
+        with open(MANUAL_LOG, encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    continue
+                if e.get("ok") and e.get("ip"):
+                    manuell.add(e["ip"]); seit[e["ip"]] = e.get("ts", 0)
+    except OSError:
+        pass
+    try:
+        with open(_host("/var/log/ids-watch.log"), encoding="utf-8", errors="replace") as fh:
+            for line in fh.readlines()[-5000:]:
+                m = re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) IDS-(?:ANGRIFF|AUSGANG) (\S+)", line)
+                if m:
+                    seit[m.group(2)] = _ts(m.group(1))
+    except OSError:
+        pass
+    jetzt, out = time.time(), {}
+    for line in r.stdout.splitlines():
+        m = re.match(r"add (ids_ban|perm_ban)[46] (\S+)(?: timeout (\d+))?", line)
+        if not m:
+            continue
+        art, ip, rest = m.groups()
+        jail = MANUAL_JAIL if ip in manuell else IPSET_JAILS[art]
+        dauer = int(rest) if rest else -1
+        out[(ip, jail)] = (int(seit.get(ip, 0)), dauer, 1, -1 if dauer < 0 else int(jetzt + dauer))
+    return out
+
+
 def _banned_now():
-    """{jail: [ip, …]} aus `fail2ban-client banned` (Python-Literal-Ausgabe)."""
+    """{jail: [ip, …]} aus `fail2ban-client banned` (Python-Literal-Ausgabe); ohne fail2ban aus den ipsets."""
+    if not f2b_da():
+        out = {}
+        for ip, jail in _ipset_sperren():
+            out.setdefault(jail, []).append(ip)
+        return out
     r = subprocess.run(_ns(["fail2ban-client", "banned"]),
                        capture_output=True, text=True, timeout=20)
     if r.returncode != 0:
@@ -584,14 +638,14 @@ def security_bans(my_ip=""):
         banned = _banned_now()
     except Exception as e:
         return {"error": f"fail2ban nicht abfragbar: {e}"}
-    times = _ban_times()
+    times = _ban_times() if f2b_da() else _ipset_sperren()
     known = _known_ips()
     web_jails = cf_jails()
     by_ip = {}
     for jail, ips in banned.items():
         for ip in ips:
-            tob, bt, cnt = times.get((ip, jail), (0, 0, 1))
-            until = -1 if bt is not None and bt < 0 else (tob + bt if tob else 0)
+            tob, bt, cnt, *bis = times.get((ip, jail), (0, 0, 1))
+            until = bis[0] if bis else (-1 if bt is not None and bt < 0 else (tob + bt if tob else 0))
             e = by_ip.setdefault(ip, {"ip": ip, "jails": [], "since": 0, "until": 0,
                                       "cloudflare": False, "bancount": 0,
                                       "known": known.get(ip) or known.get(_anschluss(ip)) or [],
@@ -664,14 +718,17 @@ def security_ban(ip, by, my_ip=""):
             return {"success": False, "error": "Das ist deine eigene aktuelle IP – Sperre abgelehnt"}
     except ValueError:
         pass
+    if f2b_da():
+        cmd = ["fail2ban-client", "set", MANUAL_JAIL, "banip", ip]
+    else:   # ohne fail2ban: direkt ins ipset des IDS-Wächters (3 Wochen – ipset erlaubt höchstens ~24 Tage; wirkt an der Server-Firewall)
+        cmd = ["ipset", "-exist", "add", "ids_ban6" if addr.version == 6 else "ids_ban4", ip, "timeout", str(21 * 86400)]
     try:
-        r = subprocess.run(_ns(["fail2ban-client", "set", MANUAL_JAIL, "banip", ip]),
-                           capture_output=True, text=True, timeout=30)
+        r = subprocess.run(_ns(cmd), capture_output=True, text=True, timeout=30)
         output = (r.stdout + r.stderr).strip()
     except Exception as e:
         return {"success": False, "error": str(e)}
     try:
-        ok = ip in _banned_now().get(MANUAL_JAIL, [])
+        ok = ip in _banned_now().get(MANUAL_JAIL, []) if f2b_da() else r.returncode == 0
     except Exception:
         ok = r.returncode == 0
     try:

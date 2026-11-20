@@ -9,6 +9,8 @@ ENVF=/etc/linux-dashboard/dashboard.env
 wert() { sed -n "s/^$1=//p" "$ENVF" 2>/dev/null | head -1 || true; }
 ZIEL=$(wert BACKUP_ZIEL); ZIEL=${ZIEL:-/var/backups/command-center}
 TAGE=$(wert BACKUP_TAGE); TAGE=${TAGE:-14}
+SPRACHE=${CC_SPRACHE:-$(wert CC_SPRACHE)}
+t() { case "$SPRACHE" in en) printf '%s' "$2" ;; es) printf '%s' "${3:-$2}" ;; *) printf '%s' "$1" ;; esac; }
 DATA=/var/lib/linux-dashboard
 [ "$(id -u)" -eq 0 ] || { echo "sudo command-center backup"; exit 1; }
 umask 077; mkdir -p "$ZIEL"
@@ -20,15 +22,15 @@ melden() {   # Fehler per ntfy (falls das Schutz-Paket ntfy eingerichtet hat)
 }
 
 case "${1:-}" in
-  --liste|--list) ls -lh "$ZIEL"/cc-*.tar.gz 2>/dev/null || echo "– keine –"; exit 0 ;;
+  --liste|--list) ls -lh "$ZIEL"/cc-*.tar.gz 2>/dev/null || echo "– $(t keine none ninguna) –"; exit 0 ;;
   --zurueck|--restore)
-    f=${2:?Datei angeben}; [ -f "$f" ] || f="$ZIEL/$f"; [ -f "$f" ] || { echo "Nicht gefunden: $2"; exit 1; }
-    tar -tzf "$f" >/dev/null || { echo "Archiv beschädigt"; exit 1; }
+    [ -n "${2:-}" ] || { echo "$(t "Datei angeben" "Name a file" "Indica un archivo")"; exit 1; }; f=$2; [ -f "$f" ] || f="$ZIEL/$f"; [ -f "$f" ] || { echo "$(t "Nicht gefunden" "Not found" "No encontrado"): $2"; exit 1; }
+    tar -tzf "$f" >/dev/null || { echo "$(t "Archiv beschädigt" "Archive damaged" "Archivo dañado")"; exit 1; }
     docker stop linux-dashboard >/dev/null 2>&1 || true
     "$0" >/dev/null 2>&1 || true            # Stand vor dem Zurückspielen sichern
     tar -xzf "$f" -C / etc/linux-dashboard var/lib/linux-dashboard
     docker start linux-dashboard >/dev/null 2>&1 || true
-    echo "Zurückgespielt: $f"; exit 0 ;;
+    echo "$(t "Zurückgespielt" "Restored" "Restaurado"): $f"; exit 0 ;;
 esac
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
@@ -38,7 +40,7 @@ mkdir -p "$tmp/var/lib" "$tmp/etc"
     | tar --null -cf - -T - ) | { mkdir -p "$tmp/var/lib/linux-dashboard"; tar -xf - -C "$tmp/var/lib/linux-dashboard"; }
 for db in "$DATA"/*.sqlite3; do
   [ -f "$db" ] || continue
-  python3 - "$db" "$tmp/var/lib/linux-dashboard/$(basename "$db")" <<'P' || melden "SQLite-Sicherung fehlgeschlagen: $db"
+  python3 - "$db" "$tmp/var/lib/linux-dashboard/$(basename "$db")" <<'P' || melden "$(t "SQLite-Sicherung fehlgeschlagen" "SQLite backup failed" "Falló la copia de SQLite"): $db"
 import sqlite3, sys
 a = sqlite3.connect(f'file:{sys.argv[1]}?mode=ro', uri=True); b = sqlite3.connect(sys.argv[2]); a.backup(b); b.close(); a.close()
 P
@@ -49,6 +51,6 @@ if docker inspect cc_db >/dev/null 2>&1; then
   docker exec cc_db pg_dump -U cc -d cc 2>/dev/null | gzip > "$tmp/var/lib/linux-dashboard/cc_db.sql.gz" || true
 fi
 datei="$ZIEL/cc-$(date +%Y-%m-%d-%H%M).tar.gz"
-tar -czf "$datei.tmp" -C "$tmp" etc var && mv "$datei.tmp" "$datei" || { melden "Backup fehlgeschlagen"; exit 1; }
+tar -czf "$datei.tmp" -C "$tmp" etc var && mv "$datei.tmp" "$datei" || { melden "$(t "Backup fehlgeschlagen" "Backup failed" "Falló la copia de seguridad")"; exit 1; }
 find "$ZIEL" -name 'cc-*.tar.gz' -mtime +"$TAGE" -delete
-echo "Gesichert: $datei ($(du -h "$datei" | cut -f1))"
+echo "$(t "Gesichert" "Saved" "Guardado"): $datei ($(du -h "$datei" | cut -f1))"

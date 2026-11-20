@@ -63,7 +63,8 @@ def sprache():
 
 
 def server_kennung():
-    for p in ("/etc/machine-id", "/var/lib/dbus/machine-id", "/proc/sys/kernel/random/boot_id"):
+    # Im Container (pid: host) ist /proc/1/root das Dateisystem des Servers → dieselbe Kennung wie im Installer
+    for p in ("/proc/1/root/etc/machine-id", "/etc/machine-id", "/var/lib/dbus/machine-id", "/proc/sys/kernel/random/boot_id"):
         try:
             mid = open(p).read().strip()
             if mid:
@@ -120,7 +121,7 @@ def pruefen(schluessel=None):
     k = schluessel or alt.get("schluessel")
     if not k:
         return status()
-    server = alt.get("server") or server_kennung()
+    server = server_kennung()                     # jedes Mal neu: eine kopierte lizenz.json zählt nicht als derselbe Server
     jetzt = int(time.time())
     r = anfragen(k.strip(), server)
     if r is not None and r.get("grund") == "zu_viele_anfragen":
@@ -162,8 +163,8 @@ def text(s, t):
     if not s.get("vorhanden"):
         return f"{t['nicht_eingetragen']}\n{t['eintragen']}\n{t['anfragen']}: {ANFRAGE}"
     if s.get("gueltig"):
-        bis = time.strftime("%d.%m.%Y", time.localtime(s["bis"])) if s.get("bis") else t["unbegrenzt"]
-        return f"✓ {t['ok']} {t['fuer']} {s.get('name')} – {t['bis']} {bis} ({s['schluessel']})"
+        bis = f"{t['bis']} " + time.strftime("%d.%m.%Y", time.localtime(s["bis"])) if s.get("bis") else t["unbegrenzt"]
+        return f"✓ {t['ok']} {t['fuer']} {s.get('name')} – {bis} ({s['schluessel']})"
     return f"✕ {t.get(s.get('grund'), s.get('grund'))}\n{t['anfragen']}: {ANFRAGE}"
 
 

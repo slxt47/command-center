@@ -261,3 +261,15 @@ action   = audit-ipset
            @@CF_BLOCK@@
            ntfy-web[appname="Command Center"]
 
+# Von Hand im Command Center gesperrt (Sicherheit -> Sperren). Wird nie durch Logzeilen
+# ausgeloest, nur durch "fail2ban-client set manuell banip <ip>". 4 Wochen.
+[manuell]
+enabled  = true
+filter   = manuell
+logpath  = /var/log/fail2ban.log
+backend  = auto
+maxretry = 1
+bantime  = 4w
+ignoreip = @@IGNOREIP@@
+action   = audit-ipset
+           @@CF_BLOCK@@

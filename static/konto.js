@@ -18,6 +18,7 @@
     art = art || p.bild_art;
     el.textContent = '';
     el.dataset.art = art;
+    if (art === 'slxt' && window._funktionen && !window._funktionen.profilbild_ebenen) art = 'initial';
     if (art === 'slxt') {
       for (const [k, src] of [['nacht', 'profil-bg-dunkel-192.webp'], ['tag', 'profil-bg-hell-192.webp'], ['gesicht', 'profil-gesicht-192.webp']]) {
         const i = document.createElement('img');
@@ -53,6 +54,7 @@
     document.querySelectorAll('.ko-bildwahl [data-art]').forEach(b => {
       const art = b.dataset.art;
       b.setAttribute('aria-checked', String(p.bild_art === art));
+      if (art === 'slxt' && window._funktionen && !window._funktionen.profilbild_ebenen) return;   // Ebenen-Bild nur, wenn eingerichtet
       avatar(b.querySelector('.avatar'), p, art === 'bild' && !p.bild_vorhanden ? 'leer' : art);
     });
     $('ko-bild-weg').hidden = !p.bild_vorhanden;

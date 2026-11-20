@@ -25,7 +25,7 @@
 #
 # Optionen für das Dashboard (sonst wird gefragt):
 #   --lan                                             aus allen privaten Netzen erreichbar (LAN, Tailscale, VPN)
-#   --nur-lokal                                       nur vom Server selbst (z. B. hinter Reverse-Proxy/Tunnel)
+#   --nur-lokal                                       nur vom Server selbst (z. B. hinter Reverse-Proxy/Tunnel; lauscht dann auf 127.0.0.1)
 #   --erlaubte-netze "192.168.0.0/16,100.64.0.0/10"   wer direkt zugreifen darf ("*" = alle)
 #   --superadmins "root,david"                        volle Rechte im Dashboard
 #   --port 8420
@@ -36,9 +36,10 @@
 #   --module "ids,backup"      genau diese Module      --mit postgres / --ohne fail2ban   dazu/weg
 #   --menue                    Auswahlliste zeigen (get.sh macht das automatisch)
 #
+#   Später ändern: sudo command-center module +postgres -ids
+#
 # Lizenz: Beim Installieren und bei Updates wird ein Lizenzschlüssel geprüft (anfragen: https://lizenz.slxt.dev).
 #   --lizenz CC-XXXXX-XXXXX-XXXXX-XXXXX   (sonst fragt der Installer)
-#   Später ändern: sudo command-center module +postgres -ids
 #
 # Einstellungen danach: /etc/linux-dashboard/dashboard.env (Dashboard) und
 # /etc/linux-dashboard/schutz.conf (Schutz). Updates ändern dort keine Werte.
@@ -85,13 +86,13 @@ while [ $# -gt 0 ]; do
     --cloudflare)     OPT_MIT="$OPT_MIT cloudflare" ;;
     --uebernehmen|--force)
                       SCHUTZ_ARGS+=("$1") ;;
-    -h|--help)        sed -n '2,42p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)        sed -n '2,45p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unbekannte Option / unknown option: $1 (--help)" >&2; exit 1 ;;
   esac
   shift
 done
 
-# Sprache (de/en): --sprache, sonst aus dashboard.env, sonst fragen (interaktiv) bzw. Deutsch
+# Sprache (de/en/es): --sprache, sonst aus dashboard.env, sonst fragen (interaktiv) bzw. Deutsch
 [ -n "$SPRACHE" ] && SPRACHE_GESETZT=1
 [ -z "$SPRACHE" ] && SPRACHE=$(sed -n 's/^CC_SPRACHE=//p' "$ENVF" 2>/dev/null | head -1 || true)
 if [ -z "$SPRACHE" ] && [ $JA -eq 0 ] && [ -t 0 ] && [ "$MODE" = install ]; then
@@ -246,6 +247,12 @@ fi
 
 # ─── Lizenz ─────────────────────────────────────────────────────────────────
 if [ $DASH -eq 1 ]; then
+  if ! command -v python3 >/dev/null 2>&1; then   # z. B. install.sh direkt aus einem Git-Klon auf einem Minimal-System
+    if command -v apt-get >/dev/null; then DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3 >/dev/null
+    elif command -v dnf >/dev/null; then dnf install -y -q python3 >/dev/null
+    elif command -v pacman >/dev/null; then pacman -Sy --noconfirm --needed python >/dev/null
+    elif command -v zypper >/dev/null; then zypper --non-interactive install python3 >/dev/null; fi || true
+  fi
   command -v python3 >/dev/null 2>&1 || { err "$(t 'python3 wird benötigt.' 'python3 is required.' 'Se necesita python3.')"; exit 1; }
   mkdir -p "$DATA_DIR"
   rc=0; CC_SPRACHE=$SPRACHE CC_LIZENZ_DATEI=$DATA_DIR/lizenz.json python3 dashboard/lizenz.py --installer "$OPT_LIZENZ" || rc=$?
@@ -316,6 +323,19 @@ compose() {
   else err "$(t "Weder 'docker compose' noch 'docker-compose' verfügbar." "Neither 'docker compose' nor 'docker-compose' available." "No hay ni 'docker compose' ni 'docker-compose'.")"; exit 1; fi
 }
 
+# ─── Lauschadresse (.env neben docker-compose.yml) ───────────────────────────
+dotenv_setze() {   # dotenv_setze KEY wert  (.env für docker compose)
+  touch .env
+  if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else printf '%s=%s\n' "$1" "$2" >> .env; fi
+}
+# Nur lokal, wenn niemand außer dem Server selbst zugreifen darf; sonst auf allen Interfaces lauschen
+# (wer zugreifen darf, prüft das Dashboard selbst über DASHBOARD_ALLOWED_NETS). Ein vorhandener Wert bleibt.
+lauschadresse() {
+  grep -q '^DASH_HOST=' .env 2>/dev/null && return 0
+  local n; n=$(sed -n 's/^DASHBOARD_ALLOWED_NETS=//p' "$ENVF" 2>/dev/null | head -1 || true)
+  case "$n" in ''|127.0.0.1|127.0.0.1/32|::1|::1/128) dotenv_setze DASH_HOST 127.0.0.1 ;; *) dotenv_setze DASH_HOST 0.0.0.0 ;; esac
+}
+
 # ─── Dashboard-Einstellungen (dashboard.env) ────────────────────────────────
 dashboard_env() {
   mkdir -p "$ETC"; chmod 755 "$ETC"
@@ -372,6 +392,15 @@ if [ $DASH -eq 1 ]; then
     docker info >/dev/null 2>&1 || { err "$(t 'Docker-Daemon nicht erreichbar.' 'Docker daemon not reachable.' 'El demonio de Docker no es accesible.')"; exit 1; }
   fi
   command -v python3 >/dev/null || { [ "$PM" = apt ] && apt-get install -y -qq python3 >/dev/null; }
+  # tmux: Terminal-Tabs laufen weiter, auch wenn die Seite zu ist (fehlt es, gibt es nur einfache Shells)
+  if ! command -v tmux >/dev/null 2>&1; then
+    case "$PM" in
+      apt) DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux >/dev/null 2>&1 ;;
+      dnf|yum) $PM install -y -q tmux >/dev/null 2>&1 ;;
+      pacman) pacman -S --noconfirm --needed tmux >/dev/null 2>&1 ;;
+      zypper) zypper --non-interactive install tmux >/dev/null 2>&1 ;;
+    esac || warn "$(t 'tmux nicht installierbar – Terminal-Tabs laufen dann nur, solange sie offen sind.' 'Could not install tmux – terminal tabs then only run while they are open.' 'No se pudo instalar tmux: las pestañas del terminal solo funcionan mientras están abiertas.')"
+  fi
 
   dashboard_env
   mkdir -p "$DATA_DIR"
@@ -383,7 +412,8 @@ if [ $DASH -eq 1 ]; then
 
   # Fertiges Image aus GitHub (amd64/arm64) – spart das Bauen. Klappt das nicht: lokal bauen.
   IMG="ghcr.io/slxt47/command-center:$VERSION"
-  if grep -q '^CC_IMAGE=' .env 2>/dev/null || [ ! -f .env ]; then echo "CC_IMAGE=$IMG" > .env; fi
+  if grep -q '^CC_IMAGE=' .env 2>/dev/null || [ ! -f .env ]; then dotenv_setze CC_IMAGE "$IMG"; fi
+  lauschadresse
   if [ "${CC_BAUEN:-0}" != 1 ] && compose pull -q 2>/dev/null; then
     log "$(t 'Fertiges Image geladen' 'Ready-made image pulled' 'Imagen lista descargada'): $IMG"
   else
@@ -416,7 +446,7 @@ if [ $DASH -eq 1 ]; then
     if bash extras/postgres/einrichten.sh >/dev/null; then
       [ "$START" -eq 1 ] && compose restart >/dev/null 2>&1 || true
     else warn "$(t 'PostgreSQL ließ sich nicht einrichten – das Command Center nutzt SQLite.' 'PostgreSQL could not be set up – the Command Center uses SQLite.' 'No se pudo configurar PostgreSQL: el Command Center usa SQLite.')"; fi
-  elif [ $WAR_PG -eq 1 ]; then
+  elif [ $WAR_PG -eq 1 ] || [ -n "$(docker ps -q -f name=^cc_db$ 2>/dev/null)" ]; then
     ( cd extras/postgres && compose stop ) >/dev/null 2>&1 || true
     [ -f "$DATA_DIR/pg.env" ] && mv "$DATA_DIR/pg.env" "$DATA_DIR/pg.env.aus"
     [ "$START" -eq 1 ] && compose restart >/dev/null 2>&1 || true
@@ -438,15 +468,15 @@ if [ $DASH -eq 1 ]; then mkdir -p "$ETC"; printf '# Module des Command Centers (
 # ─── Schutz-Paket ───────────────────────────────────────────────────────────
 if [ $SCHUTZ -eq 0 ] && [ -f "$ETC/schutz-version" ] && [ -n "$OPT_MODULE$OPT_OHNE" ]; then
   log "$(t 'Schutz-Paket wird entfernt (kein Schutz-Modul gewählt) ...' 'Removing the protection package (no protection module chosen) ...' 'Eliminando el paquete de protección (ningún módulo elegido) ...')"
-  bash schutz/install-schutz.sh --deinstallieren
+  CC_SPRACHE=$SPRACHE bash schutz/install-schutz.sh --deinstallieren
 fi
 if [ $SCHUTZ -eq 1 ]; then
   echo
-  log "$(t 'Schutz-Paket (fail2ban + IDS-Wächter) ...' 'Protection package (fail2ban + IDS guard) ...' 'Paquete de protección (fail2ban + vigilante IDS) ...')"
+  log "$(t 'Schutz-Paket' 'Protection package' 'Paquete de protección') (${MODULE:-–}) …"
   if [ $DASH -eq 0 ] && ! docker inspect linux-dashboard >/dev/null 2>&1; then
     SCHUTZ_ARGS+=(--ohne-dashboard-jail)
   fi
-  bash schutz/install-schutz.sh "${SCHUTZ_ARGS[@]}"
+  CC_SPRACHE=$SPRACHE bash schutz/install-schutz.sh "${SCHUTZ_ARGS[@]}"
 fi
 
 # ─── Zusammenfassung ────────────────────────────────────────────────────────
@@ -457,7 +487,9 @@ if [ $DASH -eq 1 ] && [ "$START" -eq 1 ]; then
   echo
   log "$(t 'Fertig!' 'Done!' '¡Listo!')  Linux Command Center $VERSION"
   echo "        →  http://localhost:${PORT}"
-  [ -n "${IP:-}" ] && echo "        →  http://${IP}:${PORT}   ($(t 'nur aus' 'only from' 'solo desde') DASHBOARD_ALLOWED_NETS)"
+  if grep -q '^DASH_HOST=127.0.0.1' .env 2>/dev/null; then
+    echo "        ($(t 'nur vom Server selbst erreichbar – für Zugriff von außen: Tunnel/Reverse-Proxy oder --erlaubte-netze' 'only reachable from the server itself – for outside access: tunnel/reverse proxy or --erlaubte-netze' 'solo accesible desde el propio servidor; para acceso externo: túnel/proxy inverso o --erlaubte-netze'))"
+  elif [ -n "${IP:-}" ]; then echo "        →  http://${IP}:${PORT}   ($(t 'nur aus' 'only from' 'solo desde') DASHBOARD_ALLOWED_NETS)"; fi
   echo "        →  $(t 'Login mit einem lokalen Systembenutzer (Host-Konto).' 'Sign in with a local system user (host account).' 'Inicia sesión con un usuario local del sistema (cuenta del host).')"
   echo
   echo "   $(t 'Einstellungen:' 'Settings:     ' 'Ajustes:      ')  $ENVF, $ETC/schutz.conf"

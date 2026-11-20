@@ -27,7 +27,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=Command Center
             org.opencontainers.image.description=Linux-Server im Browser verwalten
-            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.licenses=Elastic-2.0
       - uses: docker/build-push-action@v6
         with:
           context: .

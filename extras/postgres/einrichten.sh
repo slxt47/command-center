@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 umask 077
 [ -f .env ] || printf 'POSTGRES_PASSWORD=%s\nREPL_PASSWORD=%s\n' "$(openssl rand -hex 20)" "$(openssl rand -hex 20)" > .env
 mkdir -p daten daten-replica
-docker compose up -d cc_db
+docker compose up -d --quiet-pull cc_db
 for i in $(seq 1 30); do docker exec cc_db pg_isready -U cc -d cc -q 2>/dev/null && break; sleep 2; done
 set -a; . ./.env; set +a
 docker exec -i -e RP="$REPL_PASSWORD" cc_db sh -s <<'S'
@@ -17,7 +17,7 @@ psql -U cc -d cc -qtc "SELECT pg_create_physical_replication_slot('cc_replica') 
 grep -q replikator "$PGDATA/pg_hba.conf" || echo "host replication replikator 10.250.76.0/28 scram-sha-256" >> "$PGDATA/pg_hba.conf"
 psql -U cc -d cc -qtc "SELECT pg_reload_conf()" >/dev/null
 S
-docker compose up -d cc_db_replica
+docker compose up -d --quiet-pull cc_db_replica
 install -d -m 755 /var/lib/linux-dashboard
 printf 'POSTGRES_PASSWORD=%s\nPGPORTS=5439,5440\n' "$POSTGRES_PASSWORD" > /var/lib/linux-dashboard/pg.env
 chmod 600 /var/lib/linux-dashboard/pg.env

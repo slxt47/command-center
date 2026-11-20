@@ -8,7 +8,7 @@
 #   sudo command-center module [+name -name]  Module anzeigen / dazu / weg (fail2ban ids firewall radar cloudflare ntfy postgres backup)
 #   sudo command-center backup [--liste | --zurueck DATEI]   Sicherung jetzt / anzeigen / zurückspielen
 #   sudo command-center lizenz [SCHLÜSSEL]  Lizenz anzeigen bzw. neuen Schlüssel eintragen
-#   sudo command-center deinstallieren  Container und Programm entfernen (Daten bleiben, außer --alles)
+#   sudo command-center deinstallieren [--alles] [--ja]  Container und Programm entfernen (Daten bleiben, außer --alles)
 set -euo pipefail
 REPO=/opt/command-center
 ENVF=/etc/linux-dashboard/dashboard.env
@@ -22,13 +22,17 @@ case "${1:-status}" in
     bash ./install.sh --status
     PORT=$(sed -n 's/^DASH_PORT=//p' /etc/linux-dashboard/dashboard.env 2>/dev/null); PORT=${PORT:-8420}
     IP="$( { hostname -I 2>/dev/null || ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p'; } | awk 'NR==1{print $1}' || true)"
-    echo "$(t 'Adresse:          ' 'Address:          ' 'Dirección:        ') http://${IP:-<server>}:$PORT  ($(t 'bzw.' 'or' 'o') http://localhost:$PORT)" ;;
+    if grep -q '^DASH_HOST=127.0.0.1' .env 2>/dev/null; then
+      echo "$(t 'Adresse:          ' 'Address:          ' 'Dirección:        ') http://localhost:$PORT  ($(t 'nur lokal, DASH_HOST in' 'local only, DASH_HOST in' 'solo local, DASH_HOST en') $PWD/.env)"
+    else
+      echo "$(t 'Adresse:          ' 'Address:          ' 'Dirección:        ') http://${IP:-<server>}:$PORT  ($(t 'bzw.' 'or' 'o') http://localhost:$PORT)"
+    fi ;;
   update)
     if [ -d .git ]; then git fetch -q --depth 1 origin main && git reset -q --hard origin/main
     else curl -fsSL https://raw.githubusercontent.com/slxt47/command-center/main/get.sh | bash -s -- --update; exit; fi
     exec bash ./install.sh --update --ja ;;
   logs)      shift; compose logs --tail 200 "$@" ;;
-  neustart|restart)  compose restart ;;
+  neustart|restart)  compose up -d --force-recreate ;;   # übernimmt auch geänderte Einstellungen (dashboard.env, .env)
   module|modules)
     alt=$(sed -n 's/^MODULE="\(.*\)"/\1/p' /etc/linux-dashboard/module.conf 2>/dev/null || true)
     if [ $# -lt 2 ]; then
@@ -54,12 +58,28 @@ case "${1:-status}" in
     if grep -q '^CC_SPRACHE=' "$ENVF"; then sed -i "s/^CC_SPRACHE=.*/CC_SPRACHE=$2/" "$ENVF"; else echo "CC_SPRACHE=$2" >> "$ENVF"; fi
     compose up -d --force-recreate >/dev/null 2>&1 || compose restart
     SPRACHE=$2; echo "$(t 'Sprache für neue Besucher: Deutsch. Jeder Benutzer kann sie in den Einstellungen ändern.' 'Language for new visitors: English. Every user can change it in the settings.' 'Idioma para nuevos visitantes: español. Cada usuario puede cambiarlo en los ajustes.')" ;;
-  deinstallieren)
-    read -rp "$(t 'Command Center entfernen? Daten in /var/lib/linux-dashboard bleiben (außer mit --alles). [j/N] ' 'Remove the Command Center? Data in /var/lib/linux-dashboard stays (unless --alles). [y/N] ' '¿Eliminar el Command Center? Los datos de /var/lib/linux-dashboard se quedan (salvo con --alles). [s/N] ')" a </dev/tty; case "$a" in j|J|y|Y|s|S) ;; *) exit 1 ;; esac
+  deinstallieren|uninstall)
+    ALLES=0; JA=0; for a in "${@:2}"; do case "$a" in --alles|--all) ALLES=1 ;; --ja|-y) JA=1 ;; esac; done
+    SCHUTZ_DA=0; [ -f /etc/linux-dashboard/schutz-version ] && SCHUTZ_DA=1
+    if [ $ALLES -eq 1 ]; then
+      echo "$(t 'Entfernt Command Center, Schutz-Paket, Backup-Timer, Einstellungen und Daten (/etc/linux-dashboard, /var/lib/linux-dashboard).' 'Removes the Command Center, protection package, backup timer, settings and data (/etc/linux-dashboard, /var/lib/linux-dashboard).' 'Elimina el Command Center, el paquete de protección, el temporizador de copias, los ajustes y los datos (/etc/linux-dashboard, /var/lib/linux-dashboard).')"
+    else
+      echo "$(t 'Entfernt das Command Center; Einstellungen und Daten bleiben.' 'Removes the Command Center; settings and data stay.' 'Elimina el Command Center; los ajustes y los datos se quedan.')"
+      [ $SCHUTZ_DA -eq 1 ] && echo "$(t 'Das Schutz-Paket (fail2ban/IDS/Firewall) bleibt aktiv – alles entfernen: sudo command-center deinstallieren --alles' 'The protection package (fail2ban/IDS/firewall) stays active – remove everything: sudo command-center deinstallieren --alles' 'El paquete de protección (fail2ban/IDS/firewall) sigue activo; eliminar todo: sudo command-center deinstallieren --alles')"
+    fi
+    if [ $JA -eq 0 ]; then
+      { : </dev/tty; } 2>/dev/null || { echo "$(t 'Kein Terminal – zum Bestätigen --ja anhängen.' 'No terminal – add --ja to confirm.' 'Sin terminal: añade --ja para confirmar.')"; exit 1; }
+      read -rp "$(t 'Fortfahren? [j/N] ' 'Continue? [y/N] ' '¿Continuar? [s/N] ')" a </dev/tty; case "$a" in j|J|y|Y|s|S) ;; *) exit 1 ;; esac
+    fi
     compose down || true
+    [ -f extras/postgres/docker-compose.yml ] && ( cd extras/postgres && compose down ) >/dev/null 2>&1 || true
+    systemctl disable --now command-center-backup.timer >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/command-center-backup.service /etc/systemd/system/command-center-backup.timer /usr/local/sbin/command-center-backup
+    if [ $ALLES -eq 1 ] && [ $SCHUTZ_DA -eq 1 ]; then CC_SPRACHE=$SPRACHE bash schutz/install-schutz.sh --deinstallieren --alles || true; fi
+    systemctl daemon-reload 2>/dev/null || true
     rm -f /usr/local/bin/command-center
-    if [ "${2:-}" = --alles ]; then rm -rf -- /var/lib/linux-dashboard /etc/linux-dashboard; fi
+    if [ $ALLES -eq 1 ]; then rm -rf -- /var/lib/linux-dashboard /etc/linux-dashboard; fi
     cd / && rm -rf -- "$REPO"
-    echo "$(t 'Entfernt. Das Schutz-Paket (fail2ban/IDS) bleibt – vorher entfernen mit:' 'Removed. The protection package (fail2ban/IDS) stays – remove it beforehand with:' 'Eliminado. El paquete de protección (fail2ban/IDS) se queda: elimínalo antes con:') sudo bash /opt/command-center/schutz/install-schutz.sh --deinstallieren" ;;
+    echo "$(t 'Entfernt.' 'Removed.' 'Eliminado.')" ;;
   *) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

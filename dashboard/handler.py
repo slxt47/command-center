@@ -3249,7 +3249,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 tab = ""
         if tab and not _termtabs.tmux_da():
             # Kein tmux auf dem Host: einfache Shell (Tabs gehen, laufen aber nicht weiter, wenn die Verbindung endet)
-            _ws_send(sock, b"\r\n\x1b[33mHinweis: tmux ist auf diesem Server nicht installiert - Tabs laufen nur, solange sie offen sind.\x1b[0m\r\n")
+            _m = re.search(r"cc_sprache=(\w\w)", self.headers.get("Cookie") or "")
+            _sp = _m.group(1) if _m else os.environ.get("CC_SPRACHE", "de")
+            _hinweis = {"en": "Note: tmux is not installed on this server - tabs only run while they are open (install: apt install tmux).",
+                        "es": "Nota: tmux no está instalado en este servidor; las pestañas solo funcionan mientras están abiertas (instalar: apt install tmux)."
+                        }.get(_sp, "Hinweis: tmux ist auf diesem Server nicht installiert - Tabs laufen nur, solange sie offen sind (installieren: apt install tmux).")
+            _ws_send(sock, b"\r\n\x1b[33m" + _hinweis.encode() + b"\x1b[0m\r\n")
             tab = ""
         try:
             candidates = [_termtabs.anhaengen_befehl(benutzer, superadmin, tab, cols, rows)] if tab else []

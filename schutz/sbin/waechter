@@ -31,16 +31,20 @@ case "${1:-status}" in
     echo "Linux-Dashboard-Schutz $(cat "$ETC/schutz-version" 2>/dev/null || echo '?')"
     echo
     echo "== Dienste"
-    dienst fail2ban
+    if grep -q '^F2B_AKTIV="\?0' "$ETC/schutz.conf" 2>/dev/null; then
+        printf '  %-26s %s\n' fail2ban "nicht installiert (Modul aus) – IDS sperrt selbst"
+    else dienst fail2ban; fi
     grep -q '^FIREWALL="\?eigen' "$ETC/schutz.conf" 2>/dev/null && dienst waechter-firewall
     if grep -q '^IDS_AKTIV="\?1' "$ETC/schutz.conf" 2>/dev/null; then
         dienst suricata; dienst ids-watch
         printf '  %-26s %s\n' "IDS-Modus" "$(sed -n 's/^MODUS=//p' /etc/ids-watch.conf 2>/dev/null)"
     fi
     echo
-    echo "== Jails"
-    fail2ban-client status 2>/dev/null | sed -n 's/^.*Jail list:\s*/  /p'
-    echo
+    if command -v fail2ban-client >/dev/null 2>&1; then
+        echo "== Jails"
+        fail2ban-client status 2>/dev/null | sed -n 's/^.*Jail list:\s*/  /p'
+        echo
+    fi
     echo "== Sperrlisten (ipset)"
     for s in ssh_ban4 ssh_ban6 perm_ban4 perm_ban6 f2b_long4 f2b_long6 f2b_net4 blk_net4 ids_ban4 ids_ban6; do
         printf '  %-10s %s\n' "$s" "$(anzahl $s || echo -)"
